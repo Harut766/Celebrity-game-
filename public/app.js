@@ -148,13 +148,19 @@ function floatText(text, color = '#fff', sizeU = 9) {
 // ---------- мимика ----------
 // Все части лица — группы в SVG (character.js). Выражение = какие глаза, рот и доп. слои показать.
 const FACE_PARTS = [
-  'eyesOpen', 'eyesBlink', 'eyesHurt', 'eyesWide', 'eyesUp', 'eyesSquint', 'eyesDizzy', 'eyesCry',
-  'mouthIdle', 'mouthSmirk', 'mouthHurt', 'mouthO', 'mouthTalk', 'mouthGrit', 'mouthWobble', 'mouthDisgust',
+  'eyesOpen', 'eyesBlink', 'eyesHappy', 'eyesWink', 'eyesDown', 'eyesHurt', 'eyesWide', 'eyesUp', 'eyesSquint', 'eyesDizzy', 'eyesCry',
+  'mouthIdle', 'mouthSmirk', 'mouthLaugh', 'mouthYawn', 'mouthFrown', 'mouthHurt', 'mouthO', 'mouthTalk', 'mouthGrit', 'mouthWobble', 'mouthDisgust',
   'browsAngry', 'faceGreen', 'faceRed',
 ];
 const EXPRESSIONS = {
   neutral:   { eyes: 'eyesOpen',   mouth: 'mouthIdle' },
   smirk:     { eyes: 'eyesOpen',   mouth: 'mouthSmirk' },
+  reading:   { eyes: 'eyesDown',   mouth: 'mouthIdle' },
+  laugh:     { eyes: 'eyesHappy',  mouth: 'mouthLaugh' },
+  wink:      { eyes: 'eyesWink',   mouth: 'mouthSmirk' },
+  yawn:      { eyes: 'eyesBlink',  mouth: 'mouthYawn' },
+  grumpy:    { eyes: 'eyesOpen',   mouth: 'mouthFrown', extra: ['browsAngry'] },
+  suspicious:{ eyes: 'eyesSquint', mouth: 'mouthFrown' },
   surprised: { eyes: 'eyesWide',   mouth: 'mouthO' },
   lookUp:    { eyes: 'eyesUp',     mouth: 'mouthO' },
   dodge:     { eyes: 'eyesSquint', mouth: 'mouthGrit' },
@@ -282,8 +288,11 @@ function say(p) {
 
 
 // ---------- жизнь в покое ----------
-// Пока никто не дарит: моргает, водит глазами, листает газету, крутит головой, иногда говорит сам.
-const isIdle = () => !playing && !speech && expr === EXPRESSIONS.neutral;
+// Пока никто не дарит: моргает, водит глазами, читает и листает газету, закидывает ногу на ногу,
+// смеётся/злится/зевает над газетой и периодически что-то говорит.
+let hitToken = 0;     // растёт при каждом ударе — прерывает начатые "покойные" действия
+let idleBusy = false;
+const isIdle = () => !playing && !speech && !idleBusy;
 
 function lookAt(x, y) {
   const pupils = document.getElementById('pupils');
@@ -302,60 +311,147 @@ function blinkLoop() {
 
 function eyesLoop() {
   setTimeout(() => {
-    if (isIdle()) lookAt(rand(-6, 6), rand(-2, 3));
+    if (isIdle() && expr === EXPRESSIONS.neutral) lookAt(rand(-6, 6), rand(-2, 3));
     eyesLoop();
   }, rand(1200, 3500));
 }
 
-const idleActions = {
-  // читает газету: взгляд вниз, лёгкий кивок
-  async read() {
-    lookAt(rand(-3, 3), 4);
-    await headMove([{}, { r: 0, y: .5 }, { r: rand(-2, 2), y: .7 }, {}], 2400);
+const rustle = () => noise(.3, 4500, .12);
+
+function paperMove(frames, duration) {
+  const paper = document.getElementById('paper');
+  if (!paper) return Promise.resolve();
+  return paper.animate(frames.map(([y, r = 0]) => ({ transform: `translateY(${y}px) rotate(${r}deg)` })), { duration, easing: 'ease-in-out' }).finished;
+}
+
+async function flipPage() {
+  const page = document.getElementById('page');
+  if (!page) return;
+  rustle();
+  page.style.opacity = '1';
+  await page.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(-1)' }], { duration: 600, easing: 'ease-in-out' }).finished;
+  page.style.opacity = '0';
+}
+
+let legsCrossed = false;
+async function toggleLegs() {
+  const normal = document.getElementById('legR');
+  const crossed = document.getElementById('legRCrossed');
+  if (!normal || !crossed) return;
+  legsCrossed = !legsCrossed;
+  const hide = legsCrossed ? normal : crossed;
+  const show = legsCrossed ? crossed : normal;
+  await headMove([{}, { y: -1 }, {}], 450);
+  hide.style.display = 'none';
+  show.style.display = '';
+  show.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+}
+
+// Реплика настроения из config.idle.moods (с шансом, чтобы не болтал без остановки)
+async function moodLine(mood, chance = .6) {
+  const phrases = config.idle?.moods?.[mood];
+  if (phrases?.length && Math.random() < chance) await say({ phrases });
+  else await sleep(1400);
+}
+
+const idleActions = [
+  // читает: взгляд в газету, кивает по строчкам
+  async function read(still) {
+    setFace('reading');
+    await headMove([{}, { y: .6 }, { r: -2, y: .7 }, { r: 2, y: .7 }, { y: .6 }], 2600);
+    if (still()) await flipPage();
   },
-  // перелистывает страницу
-  async flip() {
-    const page = document.getElementById('page');
-    if (!page) return;
-    lookAt(5, 3);
-    page.style.opacity = '1';
-    await page.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(-1)' }], { duration: 650, easing: 'ease-in-out' }).finished;
-    page.style.opacity = '0';
+  // вычитал что-то удивительное
+  async function surprised(still) {
+    setFace('reading');
+    await headMove([{}, { y: .7 }, { y: .7 }], 1400);
+    if (!still()) return;
+    setFace('surprised'); rustle();
+    paperMove([[0], [-12, -3], [-12, -3], [0]], 1600);
+    await headMove([{ y: .7 }, { y: -1.2 }, { y: -1.2 }, {}], 900);
+    if (still()) await moodLine('surprised');
   },
-  // оглядывается по сторонам
-  async lookAround() {
+  // смеётся над газетой, плечи трясутся
+  async function laugh(still) {
+    setFace('reading');
+    await sleep(900);
+    if (!still()) return;
+    setFace('laugh');
+    const shake = [{}, { y: -.5 }, {}, { y: -.5 }, {}, { y: -.5 }, {}, { y: -.5 }, {}];
+    paperMove([[0], [-4], [0], [-4], [0], [-4], [0]], 1400);
+    await Promise.all([headMove(shake, 1400), moodLine('laugh', .8)]);
+  },
+  // злится на статью
+  async function grumpy(still) {
+    setFace('reading');
+    await sleep(1000);
+    if (!still()) return;
+    setFace('grumpy'); rustle();
+    paperMove([[0, 0], [0, -3], [0, 3], [0, -2], [0, 0]], 700);
+    await headMove([{}, { r: -5 }, { r: 5 }, {}], 700);
+    if (still()) await moodLine('grumpy');
+  },
+  // зевает
+  async function yawn(still) {
+    setFace('yawn');
+    await headMove([{}, { r: -6, y: -1 }, { r: -6, y: -1 }, {}], 1800);
+    if (still()) await moodLine('yawn', .5);
+  },
+  // опускает газету, подмигивает зрителям
+  async function wink(still) {
+    lookAt(0, 0); rustle();
+    const down = paperMove([[0], [40], [40], [40], [0]], 2600);
+    await sleep(500);
+    if (!still()) return;
+    setFace('wink');
+    await moodLine('wink', .7);
+    await down;
+  },
+  // подозрительно косится в камеру
+  async function suspicious(still) {
+    lookAt(-5, 0);
+    setFace('suspicious');
+    await headMove([{}, { r: 6, x: .8 }, { r: 6, x: .8 }, {}], 1800);
+    if (still()) await moodLine('suspicious');
+  },
+  // оглядывается
+  async function lookAround() {
     const side = Math.random() < .5 ? -1 : 1;
     lookAt(side * 6, 0);
     await headMove([{}, { r: side * 7, x: side * .6 }, { r: side * 7, x: side * .6 }, { r: -side * 5, x: -side * .4 }, {}], 2600);
   },
-  // смотрит в камеру и ухмыляется
-  async smirk() {
-    lookAt(0, 0);
-    setFace('smirk');
-    await headMove([{}, { r: -4 }, { r: -4 }, {}], 1800);
-    if (expr === EXPRESSIONS.smirk) setFace('neutral');
-  },
-};
+  // закидывает ногу на ногу / ставит обратно
+  async function legs() { await toggleLegs(); },
+  // перелистывает страницу
+  async function flip() { setFace('reading'); await flipPage(); await sleep(500); },
+];
 
 function actionsLoop() {
   setTimeout(async () => {
     if (isIdle()) {
-      const names = Object.keys(idleActions);
-      try { await idleActions[names[Math.floor(Math.random() * names.length)]](); } catch {}
+      idleBusy = true;
+      const tok = hitToken;
+      const still = () => tok === hitToken;
+      try { await idleActions[Math.floor(Math.random() * idleActions.length)](still); } catch {}
+      if (still()) { setFace('neutral'); lookAt(0, 0); }
+      idleBusy = false;
     }
     actionsLoop();
-  }, rand(4000, 9000));
+  }, rand(2500, 6000));
 }
 
 function talkLoop() {
-  const every = (config.idle?.talkEverySec ?? 40) * 1000;
+  const every = (config.idle?.talkEverySec ?? 20) * 1000;
   if (!every || !config.idle?.phrases?.length) return;
   setTimeout(async () => {
     if (isIdle()) {
+      idleBusy = true;
+      const tok = hitToken;
       lookAt(0, 0);
       setFace('smirk');
       await say({ phrases: config.idle.phrases });
-      if (expr === EXPRESSIONS.smirk) setFace('neutral');
+      if (tok === hitToken) setFace('neutral');
+      idleBusy = false;
     }
     talkLoop();
   }, rand(every * .7, every * 1.3));
@@ -552,6 +648,7 @@ async function playNext() {
   const p = byId[hit.punishmentId];
   if (p) {
     showBanner(hit, p);
+    hitToken++;
     lookAt(0, 0);
     highlight(p.id);
     try { await playEffect(p); } catch (e) { console.error(e); }

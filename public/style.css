@@ -163,3 +163,6 @@ body { display: flex; align-items: center; justify-content: center; }
 @keyframes breathe { 50% { transform: translateY(-5px) scale(1.012, 1.008); } }
 #pupils { transition: transform .25s ease-out; }
 #page { transform-box: fill-box; transform-origin: 0 50%; }
+#paper { transform-box: fill-box; transform-origin: 50% 50%; }
+#shinR { transform-box: fill-box; transform-origin: 85% 5%; animation: swing 1.6s ease-in-out infinite; }
+@keyframes swing { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(9deg); } }

@@ -50,19 +50,38 @@ window.defaultCharacterSvg = (signText) => `
       <path d="M22 30 L12 20 A6 6 0 0 1 22 13 A6 6 0 0 1 32 20Z" fill="#e0314b"/>
     </pattern>
   </defs>
-  <path d="M385 1235 Q380 1330 420 1350 H520 Q545 1320 540 1235Z" fill="url(#hearts)" stroke="#c9c9d4" stroke-width="4"/>
-  <path d="M695 1235 Q700 1330 660 1350 H560 Q535 1320 540 1235Z" fill="url(#hearts)" stroke="#c9c9d4" stroke-width="4"/>
-  <ellipse cx="465" cy="1355" rx="58" ry="34" fill="#efc0a4"/>
-  <ellipse cx="615" cy="1355" rx="58" ry="34" fill="#efc0a4"/>
-  <path d="M430 1360 L438 1500 H494 L500 1360Z" fill="#efc0a4"/>
-  <path d="M580 1360 L586 1500 H642 L650 1360Z" fill="#efc0a4"/>
-  <path d="M452 1400 q8 6 16 0 M460 1430 q8 6 16 0 M598 1405 q8 6 16 0 M606 1438 q8 6 16 0" stroke="#d9a386" stroke-width="3" fill="none"/>
-  <path d="M398 1480 Q465 1455 532 1480 Q540 1510 525 1535 Q465 1550 405 1535 Q390 1510 398 1480Z" fill="#23262e"/>
-  <path d="M548 1480 Q615 1455 682 1480 Q690 1510 675 1535 Q615 1550 555 1535 Q540 1510 548 1480Z" fill="#23262e"/>
-  <path d="M410 1500 Q465 1490 520 1505 M560 1505 Q615 1490 670 1500" stroke="#3a3e4a" stroke-width="5" fill="none"/>
-  <ellipse cx="455" cy="1565" rx="62" ry="24" fill="#0f0f12"/><ellipse cx="625" cy="1565" rx="62" ry="24" fill="#0f0f12"/>
-  <ellipse cx="440" cy="1557" rx="20" ry="6" fill="#4a4a55"/><ellipse cx="610" cy="1557" rx="20" ry="6" fill="#4a4a55"/>
-
+  <!-- левая нога -->
+  <g id="legL">
+    <path d="M385 1235 Q380 1330 420 1350 H520 Q545 1320 540 1235Z" fill="url(#hearts)" stroke="#c9c9d4" stroke-width="4"/>
+    <ellipse cx="465" cy="1355" rx="58" ry="34" fill="#efc0a4"/>
+    <path d="M430 1360 L438 1500 H494 L500 1360Z" fill="#efc0a4"/>
+    <path d="M452 1400 q8 6 16 0 M460 1430 q8 6 16 0" stroke="#d9a386" stroke-width="3" fill="none"/>
+    <path d="M398 1480 Q465 1455 532 1480 Q540 1510 525 1535 Q465 1550 405 1535 Q390 1510 398 1480Z" fill="#23262e"/>
+    <path d="M410 1500 Q465 1490 520 1505" stroke="#3a3e4a" stroke-width="5" fill="none"/>
+    <ellipse cx="455" cy="1565" rx="62" ry="24" fill="#0f0f12"/><ellipse cx="440" cy="1557" rx="20" ry="6" fill="#4a4a55"/>
+  </g>
+  <!-- правая нога: обычная -->
+  <g id="legR">
+    <path d="M695 1235 Q700 1330 660 1350 H560 Q535 1320 540 1235Z" fill="url(#hearts)" stroke="#c9c9d4" stroke-width="4"/>
+    <ellipse cx="615" cy="1355" rx="58" ry="34" fill="#efc0a4"/>
+    <path d="M580 1360 L586 1500 H642 L650 1360Z" fill="#efc0a4"/>
+    <path d="M598 1405 q8 6 16 0 M606 1438 q8 6 16 0" stroke="#d9a386" stroke-width="3" fill="none"/>
+    <path d="M548 1480 Q615 1455 682 1480 Q690 1510 675 1535 Q615 1550 555 1535 Q540 1510 548 1480Z" fill="#23262e"/>
+    <path d="M560 1505 Q615 1490 670 1500" stroke="#3a3e4a" stroke-width="5" fill="none"/>
+    <ellipse cx="625" cy="1565" rx="62" ry="24" fill="#0f0f12"/><ellipse cx="610" cy="1557" rx="20" ry="6" fill="#4a4a55"/>
+  </g>
+  <!-- правая нога закинута на левую, ступня покачивается (CSS #shinR) -->
+  <g id="legRCrossed" style="display:none">
+    <path d="M700 1235 Q705 1300 660 1318 L470 1348 Q420 1340 428 1290 L540 1235Z" fill="url(#hearts)" stroke="#c9c9d4" stroke-width="4"/>
+    <g id="shinR">
+      <path d="M392 1318 L352 1452 L404 1468 L452 1330Z" fill="#efc0a4"/>
+      <path d="M392 1380 q8 6 16 0 M382 1410 q8 6 16 0" stroke="#d9a386" stroke-width="3" fill="none"/>
+      <path d="M318 1446 Q380 1425 440 1462 Q440 1492 420 1510 Q365 1515 322 1492 Q305 1470 318 1446Z" fill="#23262e"/>
+      <ellipse cx="350" cy="1528" rx="62" ry="22" fill="#0f0f12" transform="rotate(12 350 1528)"/>
+      <ellipse cx="332" cy="1520" rx="18" ry="5" fill="#4a4a55" transform="rotate(12 332 1520)"/>
+    </g>
+    <ellipse cx="428" cy="1318" rx="50" ry="40" fill="#efc0a4"/>
+  </g>
   <!-- верх тела: дышит (CSS-анимация #upper) -->
   <g id="upper">
   <!-- пиджак, рубашка, галстук -->
@@ -74,6 +93,9 @@ window.defaultCharacterSvg = (signText) => `
   <circle cx="620" cy="945" r="7" fill="#c9a24a"/>
 
   <!-- газета и руки -->
+  <path d="M420 885 Q345 985 335 1100" stroke="#2b2f3a" stroke-width="78" fill="none" stroke-linecap="round"/>
+  <path d="M660 885 Q735 965 745 1070" stroke="#2b2f3a" stroke-width="78" fill="none" stroke-linecap="round"/>
+  <g id="paper">
   <g transform="rotate(-6 540 1130)">
     <rect x="330" y="1030" width="420" height="230" fill="#efe8d6" stroke="#b9ad90" stroke-width="4"/>
     <line x1="540" y1="1030" x2="540" y2="1260" stroke="#b9ad90" stroke-width="4"/>
@@ -86,12 +108,11 @@ window.defaultCharacterSvg = (signText) => `
       <g fill="#8e8672">${[1060,1090,1120,1150,1180,1210].map(y => `<rect x="565" y="${y}" width="160" height="10"/>`).join('')}</g>
     </g>
   </g>
-  <path d="M420 885 Q345 985 335 1100" stroke="#2b2f3a" stroke-width="78" fill="none" stroke-linecap="round"/>
-  <path d="M660 885 Q735 965 745 1070" stroke="#2b2f3a" stroke-width="78" fill="none" stroke-linecap="round"/>
   <rect x="300" y="1100" width="70" height="22" rx="8" fill="#f4f4f6" transform="rotate(10 335 1111)"/>
   <rect x="712" y="1068" width="70" height="22" rx="8" fill="#f4f4f6" transform="rotate(-8 747 1079)"/>
   <ellipse cx="330" cy="1145" rx="40" ry="34" fill="#f0c4a8"/>
   <ellipse cx="750" cy="1112" rx="40" ry="34" fill="#f0c4a8"/>
+  </g>
 
   <!-- голова: карикатура (залысины, узкое лицо, прищур, тонкие губы) -->
   <g id="head">
@@ -139,6 +160,26 @@ window.defaultCharacterSvg = (signText) => `
       <path d="M470 655 Q492 650 515 657 M565 657 Q588 650 610 655" stroke="#a8906f" stroke-width="7" fill="none" stroke-linecap="round"/>
       <path d="M472 682 Q493 688 514 682 M566 682 Q587 688 608 682" stroke="#3a2e28" stroke-width="6" fill="none" stroke-linecap="round"/>
     </g>
+    <g id="eyesHappy" style="display:none" stroke="#3a2e28" stroke-width="7" fill="none" stroke-linecap="round">
+      <path d="M470 655 Q492 646 515 654 M565 654 Q588 646 610 655" stroke="#a8906f"/>
+      <path d="M474 688 Q493 670 512 688"/><path d="M568 688 Q587 670 606 688"/>
+    </g>
+    <g id="eyesWink" style="display:none">
+      <path d="M470 655 Q492 648 515 656 M565 650 Q588 640 610 650" stroke="#a8906f" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M472 684 Q493 690 514 680" stroke="#3a2e28" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M566 682 Q587 670 608 682 Q587 690 566 682Z" fill="#fff"/>
+      <circle cx="587" cy="681" r="7" fill="#6a8fb0"/><circle cx="587" cy="681" r="3" fill="#1b1b1b"/>
+    </g>
+    <g id="eyesDown" style="display:none">
+      <path d="M470 660 Q492 655 515 662 M565 662 Q588 655 610 660" stroke="#a8906f" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M472 684 Q493 678 514 684 Q493 691 472 684Z" fill="#fff"/>
+      <path d="M566 684 Q587 678 608 684 Q587 691 566 684Z" fill="#fff"/>
+      <circle cx="493" cy="687" r="5" fill="#1b1b1b"/><circle cx="587" cy="687" r="5" fill="#1b1b1b"/>
+      <path d="M470 681 Q493 674 516 681 M564 681 Q587 674 610 681" stroke="#c99478" stroke-width="6" fill="none"/>
+    </g>
+    <path id="mouthLaugh" d="M505 792 Q540 800 575 792 Q570 830 540 832 Q510 830 505 792Z" fill="#4a1414" stroke="#b56a5c" stroke-width="4" style="display:none"/>
+    <ellipse id="mouthYawn" cx="540" cy="812" rx="20" ry="30" fill="#4a1414" style="display:none"/>
+    <path id="mouthFrown" d="M512 810 Q540 796 570 810" stroke="#b56a5c" stroke-width="7" fill="none" stroke-linecap="round" style="display:none"/>
     <path id="mouthSmirk" d="M512 802 Q545 808 574 788" stroke="#b56a5c" stroke-width="7" fill="none" stroke-linecap="round" style="display:none"/>
     <g id="eyesWide" style="display:none">
       <path d="M468 638 Q492 622 516 636 M564 636 Q588 622 612 638" stroke="#a8906f" stroke-width="7" fill="none" stroke-linecap="round"/>
