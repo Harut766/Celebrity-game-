@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "voices": "node scripts/make-voices.mjs"
   },
   "repository": {
     "type": "git",
@@ -18,6 +19,7 @@
   "homepage": "https://github.com/Harut766/Celebrity-game-#readme",
   "dependencies": {
     "express": "^5.2.1",
+    "msedge-tts": "^2.0.8",
     "tiktok-live-connector": "^2.5.0",
     "ws": "^8.22.0"
   },
