@@ -1,0 +1,25 @@
+{
+  "name": "celebrity-game",
+  "version": "1.0.0",
+  "description": "TikTok LIVE игра: каждый подарок = своё наказание по цене",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Harut766/Celebrity-game-.git"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Harut766/Celebrity-game-/issues"
+  },
+  "homepage": "https://github.com/Harut766/Celebrity-game-#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "tiktok-live-connector": "^2.5.0",
+    "ws": "^8.22.0"
+  },
+  "type": "module"
+}

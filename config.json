@@ -1,0 +1,79 @@
+{
+  "tiktokUsername": "",
+  "port": 3000,
+
+  "character": {
+    "name": "Բոզի Տղա ալին",
+    "image": "",
+    "idleVideo": "",
+    "faceX": 50,
+    "faceY": 44
+  },
+
+  "maxRepeatPerGift": 5,
+  "maxQueue": 50,
+
+  "punishments": [
+    {
+      "id": "egg",
+      "price": 1,
+      "emoji": "🥚",
+      "title": "Яйцо в лоб",
+      "titleArm": "Ձվով հարված դեմքին",
+      "exampleGift": "🌹 Роза",
+      "gifts": ["Rose"],
+      "video": ""
+    },
+    {
+      "id": "tomato",
+      "price": 5,
+      "emoji": "🍅",
+      "title": "Помидор в лицо",
+      "titleArm": "Լոլիկով հարված դեմքին",
+      "exampleGift": "🫰 Finger Heart",
+      "gifts": [],
+      "video": ""
+    },
+    {
+      "id": "watermelon",
+      "price": 30,
+      "emoji": "🍉",
+      "title": "Арбуз в лицо",
+      "titleArm": "Ձմերուկի հարված դեմքին",
+      "exampleGift": "🍩 Пончик",
+      "gifts": ["Doughnut", "Donut"],
+      "video": ""
+    },
+    {
+      "id": "brick",
+      "price": 99,
+      "emoji": "🧱",
+      "title": "Кирпич по голове",
+      "titleArm": "Կիրպիչով հարված դեմքին",
+      "exampleGift": "💐 от 99 монет",
+      "gifts": [],
+      "video": ""
+    },
+    {
+      "id": "poop",
+      "price": 299,
+      "emoji": "💩",
+      "title": "Ведро говна на голову",
+      "titleArm": "Քաքը թափվում ա գլխին",
+      "exampleGift": "🎁 от 299 монет",
+      "gifts": [],
+      "video": ""
+    },
+    {
+      "id": "full",
+      "price": 1000,
+      "emoji": "🔥",
+      "title": "ПОЛНОЕ НАКАЗАНИЕ",
+      "titleArm": "Բեսամը պատիժ !!!",
+      "exampleGift": "🦁 от 1000 монет",
+      "gifts": [],
+      "video": "",
+      "combo": ["egg", "tomato", "watermelon", "brick", "poop"]
+    }
+  ]
+}
