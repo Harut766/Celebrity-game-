@@ -5,6 +5,8 @@
 //   npm run voices -- --voice ru-RU-DmitryNeural --pitch -12Hz --rate -5%
 //   npm run voices -- --dry                только показать, что будет озвучено
 //   npm run voices -- --list               список голосов, которые говорят по-русски
+//   npm run voices -- --preview            послушать каждый голос по очереди (Mac)
+//   npm run voices -- --preview --voice ru-RU-DmitryNeural --pitch -25Hz   послушать один вариант
 //
 // Уже озвученные фразы пропускаются. Если поменять текст фразы, у неё будет новый файл.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, createWriteStream, unlinkSync } from 'node:fs';
@@ -30,6 +32,45 @@ const rate = args.rate || '-5%';
 const dry = Boolean(args.dry);
 
 const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+
+if (args.preview) {
+  const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
+  const text = typeof args.text === 'string' ? args.text : 'Это провокация! Кто кинул? Найти и наказать!';
+  let names;
+  if (args.voice) names = [voice];
+  else {
+    try {
+      const all = await new MsEdgeTTS().getVoices();
+      names = all.filter(v => v.Locale === 'ru-RU' || /Multilingual/.test(v.ShortName)).map(v => v.ShortName);
+    } catch (e) { console.error(`Не удалось получить список голосов: ${e.message}`); process.exit(1); }
+  }
+  const dir = new URL('../public/media/voice/preview/', import.meta.url);
+  mkdirSync(dir, { recursive: true });
+  for (const name of names) {
+    const file = fileURLToPath(new URL(`${name}.mp3`, dir));
+    let ok = false;
+    for (let attempt = 1; attempt <= 4 && !ok; attempt++) {
+      const tts = new MsEdgeTTS();
+      try {
+        await tts.setMetadata(name, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+        const { audioStream } = await tts.toStream(text, { pitch, rate });
+        await new Promise((resolve, reject) => {
+          const out = createWriteStream(file);
+          audioStream.pipe(out); audioStream.on('error', reject);
+          out.on('finish', resolve); out.on('error', reject);
+        });
+        ok = true;
+      } catch { await new Promise(r => setTimeout(r, 600 * attempt)); }
+      finally { try { tts.close(); } catch {} }
+    }
+    if (!ok) { console.log(`✗ ${name}: не получилось, пропускаю`); continue; }
+    console.log(`▶ ${name}`);
+    if (platform() === 'darwin') execFileSync('afplay', [file]);
+  }
+  if (platform() !== 'darwin') console.log(`Файлы для прослушивания: ${fileURLToPath(dir)}`);
+  console.log('\nПонравился голос? Переозвучить всё им: npm run voices -- --voice ИМЯ_ГОЛОСА');
+  process.exit(0);
+}
 
 if (args.list) {
   if (engine === 'mac') {
