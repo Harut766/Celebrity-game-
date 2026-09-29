@@ -43,17 +43,44 @@ function phraseLists() {
 
 async function makeEdgeTts() {
   const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
-  const tts = new MsEdgeTTS();
-  await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  // Одна фраза = новое соединение: сервис Microsoft часто закрывает сокет между запросами.
+  async function once(text, file) {
+    const tts = new MsEdgeTTS();
+    try {
+      await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+      const { audioStream } = await tts.toStream(text, { pitch, rate });
+      await new Promise((resolve, reject) => {
+        const out = createWriteStream(file);
+        audioStream.pipe(out);
+        audioStream.on('error', reject);
+        out.on('finish', resolve);
+        out.on('error', reject);
+      });
+    } finally {
+      try { tts.close(); } catch {}
+    }
+  }
+
+  // Проверяем, что сервис вообще доступен (иначе сразу понятная ошибка)
+  const probe = new MsEdgeTTS();
+  await probe.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+  try { probe.close(); } catch {}
+
   return async (text, file) => {
-    const { audioStream } = await tts.toStream(text, { pitch, rate });
-    await new Promise((resolve, reject) => {
-      const out = createWriteStream(file);
-      audioStream.pipe(out);
-      audioStream.on('error', reject);
-      out.on('finish', resolve);
-      out.on('error', reject);
-    });
+    let lastError;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        await once(text, file);
+        return;
+      } catch (e) {
+        lastError = e;
+        try { unlinkSync(file); } catch {}
+        await sleep(700 * attempt);
+      }
+    }
+    throw lastError;
   };
 }
 
