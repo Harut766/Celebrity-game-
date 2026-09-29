@@ -103,6 +103,7 @@ npm run voices
 Настройки голоса:
 ```bash
 npm run voices -- --pitch -15Hz --rate -10%      # ниже и медленнее
+npm run voices -- --list                          # какие голоса есть
 npm run voices -- --voice ru-RU-SvetlanaNeural   # другой голос
 npm run voices -- --engine mac                    # встроенный голос macOS (Yuri), без интернета
 ```

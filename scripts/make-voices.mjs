@@ -4,6 +4,7 @@
 //   npm run voices -- --engine mac         встроенный голос macOS (без интернета)
 //   npm run voices -- --voice ru-RU-DmitryNeural --pitch -12Hz --rate -5%
 //   npm run voices -- --dry                только показать, что будет озвучено
+//   npm run voices -- --list               список голосов, которые говорят по-русски
 //
 // Уже озвученные фразы пропускаются. Если поменять текст фразы, у неё будет новый файл.
 import { readFileSync, writeFileSync, mkdirSync, existsSync, createWriteStream, unlinkSync } from 'node:fs';
@@ -29,6 +30,23 @@ const rate = args.rate || '-5%';
 const dry = Boolean(args.dry);
 
 const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+
+if (args.list) {
+  if (engine === 'mac') {
+    const out = execFileSync('say', ['-v', '?']).toString();
+    console.log(out.split('\n').filter(l => /ru_RU/.test(l)).join('\n') || 'Русских голосов нет: Системные настройки → Универсальный доступ → Устный контент → Управление голосами');
+  } else {
+    const { MsEdgeTTS } = await import('msedge-tts');
+    const voices = await new MsEdgeTTS().getVoices();
+    const ru = voices.filter(v => v.Locale === 'ru-RU' || /Multilingual/.test(v.ShortName));
+    console.log('Русские:');
+    ru.filter(v => v.Locale === 'ru-RU').forEach(v => console.log(`  ${v.ShortName}  (${v.Gender === 'Male' ? 'мужской' : 'женский'})`));
+    console.log('\nМногоязычные (говорят по-русски с лёгким акцентом):');
+    ru.filter(v => v.Locale !== 'ru-RU').forEach(v => console.log(`  ${v.ShortName}  (${v.Gender === 'Male' ? 'мужской' : 'женский'})`));
+  }
+  process.exit(0);
+}
+
 
 // Все места в конфиге, где есть фразы: [ключ для имени файла, массив фраз]
 function phraseLists() {
