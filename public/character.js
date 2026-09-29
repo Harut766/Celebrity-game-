@@ -109,6 +109,52 @@ window.defaultCharacterSvg = (signText) => `
     <!-- тонкие губы, лёгкая ухмылка -->
     <path id="mouthIdle" d="M512 800 Q540 806 572 796" stroke="#b56a5c" stroke-width="7" fill="none" stroke-linecap="round"/>
     <ellipse id="mouthHurt" cx="540" cy="805" rx="22" ry="18" fill="#5a1a1a" style="display:none"/>
+
+    <!-- мимика: все группы скрыты, app.js включает нужные (setFace) -->
+    <path id="faceGreen" d="M540 545 Q650 545 655 650 Q660 740 620 800 Q585 845 540 848 Q495 845 460 800 Q420 740 425 650 Q430 545 540 545Z" fill="#7bbf3a" opacity=".35" style="display:none"/>
+    <path id="faceRed" d="M540 545 Q650 545 655 650 Q660 740 620 800 Q585 845 540 848 Q495 845 460 800 Q420 740 425 650 Q430 545 540 545Z" fill="#e8352a" opacity=".22" style="display:none"/>
+    <g id="eyesWide" style="display:none">
+      <path d="M468 638 Q492 622 516 636 M564 636 Q588 622 612 638" stroke="#a8906f" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <circle cx="493" cy="680" r="16" fill="#fff"/><circle cx="587" cy="680" r="16" fill="#fff"/>
+      <circle cx="493" cy="680" r="6" fill="#1b1b1b"/><circle cx="587" cy="680" r="6" fill="#1b1b1b"/>
+    </g>
+    <g id="eyesUp" style="display:none">
+      <path d="M468 640 Q492 626 516 638 M564 638 Q588 626 612 640" stroke="#a8906f" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <ellipse cx="493" cy="680" rx="15" ry="13" fill="#fff"/><ellipse cx="587" cy="680" rx="15" ry="13" fill="#fff"/>
+      <circle cx="493" cy="672" r="7" fill="#6a8fb0"/><circle cx="587" cy="672" r="7" fill="#6a8fb0"/>
+      <circle cx="493" cy="671" r="3" fill="#1b1b1b"/><circle cx="587" cy="671" r="3" fill="#1b1b1b"/>
+    </g>
+    <g id="eyesSquint" style="display:none" stroke="#3a2e28" stroke-width="8" fill="none" stroke-linecap="round">
+      <path d="M472 672 L512 684 L472 694"/><path d="M608 672 L568 684 L608 694"/>
+    </g>
+    <g id="eyesDizzy" style="display:none" stroke="#2a2320" stroke-width="5" fill="none">
+      <g class="spin"><path d="M493 681 m-4 0 a4 4 0 1 1 8 0 a8 8 0 1 1 -16 0 a12 12 0 1 1 24 0"/></g>
+      <g class="spin rev"><path d="M587 681 m-4 0 a4 4 0 1 1 8 0 a8 8 0 1 1 -16 0 a12 12 0 1 1 24 0"/></g>
+    </g>
+    <g id="eyesCry" style="display:none">
+      <path d="M470 678 Q493 694 516 678 M564 678 Q587 694 610 678" stroke="#3a2e28" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M470 650 L514 660 M610 650 L566 660" stroke="#a8906f" stroke-width="7" stroke-linecap="round"/>
+      <g fill="#6cc3ff" opacity=".9">
+        <path class="tear" d="M478 694 q-8 14 0 18 q8 -4 0 -18Z"/>
+        <path class="tear t2" d="M602 694 q-8 14 0 18 q8 -4 0 -18Z"/>
+        <path class="tear t3" d="M486 694 q-8 14 0 18 q8 -4 0 -18Z"/>
+        <path class="tear t4" d="M594 694 q-8 14 0 18 q8 -4 0 -18Z"/>
+      </g>
+    </g>
+    <g id="browsAngry" style="display:none" stroke="#8a7560" stroke-width="10" stroke-linecap="round">
+      <path d="M466 646 L516 668"/><path d="M614 646 L564 668"/>
+    </g>
+    <ellipse id="mouthO" cx="540" cy="806" rx="13" ry="17" fill="#4a1414" style="display:none"/>
+    <ellipse id="mouthTalk" cx="540" cy="803" rx="20" ry="9" fill="#4a1414" style="display:none"/>
+    <g id="mouthGrit" style="display:none">
+      <rect x="510" y="792" width="60" height="22" rx="6" fill="#fff" stroke="#8a3b30" stroke-width="4"/>
+      <path d="M525 792 V814 M540 792 V814 M555 792 V814 M510 803 H570" stroke="#9a9a9a" stroke-width="2"/>
+    </g>
+    <path id="mouthWobble" d="M510 806 Q520 796 530 806 T550 806 T570 806" stroke="#b56a5c" stroke-width="7" fill="none" stroke-linecap="round" style="display:none"/>
+    <g id="mouthDisgust" style="display:none">
+      <ellipse cx="545" cy="818" rx="12" ry="14" fill="#e06a8a"/>
+      <path d="M508 808 Q520 796 532 806 T556 806 T574 800" stroke="#8a3b30" stroke-width="8" fill="none" stroke-linecap="round"/>
+    </g>
     <path d="M522 830 Q540 838 558 830" stroke="#e0ad92" stroke-width="4" fill="none"/>
   </g>
   </g>

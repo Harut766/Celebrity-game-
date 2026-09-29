@@ -145,59 +145,200 @@ function floatText(text, color = '#fff', sizeU = 9) {
   ], { duration: 1200, easing: 'ease-out' }).finished.then(() => el.remove());
 }
 
-// Реакция персонажа: тряска + зажмуренные глаза.
-function hurt(ms = 900) {
+// ---------- мимика ----------
+// Все части лица — группы в SVG (character.js). Выражение = какие глаза, рот и доп. слои показать.
+const FACE_PARTS = [
+  'eyesOpen', 'eyesHurt', 'eyesWide', 'eyesUp', 'eyesSquint', 'eyesDizzy', 'eyesCry',
+  'mouthIdle', 'mouthHurt', 'mouthO', 'mouthTalk', 'mouthGrit', 'mouthWobble', 'mouthDisgust',
+  'browsAngry', 'faceGreen', 'faceRed',
+];
+const EXPRESSIONS = {
+  neutral:   { eyes: 'eyesOpen',   mouth: 'mouthIdle' },
+  surprised: { eyes: 'eyesWide',   mouth: 'mouthO' },
+  lookUp:    { eyes: 'eyesUp',     mouth: 'mouthO' },
+  dodge:     { eyes: 'eyesSquint', mouth: 'mouthGrit' },
+  hurt:      { eyes: 'eyesHurt',   mouth: 'mouthHurt', extra: ['faceRed'] },
+  angry:     { eyes: 'eyesOpen',   mouth: 'mouthGrit', extra: ['browsAngry', 'faceRed'] },
+  dizzy:     { eyes: 'eyesDizzy',  mouth: 'mouthWobble' },
+  cry:       { eyes: 'eyesCry',    mouth: 'mouthWobble' },
+  disgust:   { eyes: 'eyesSquint', mouth: 'mouthDisgust', extra: ['faceGreen'] },
+};
+let expr = EXPRESSIONS.neutral;
+let talkOpen = false;
+
+function renderFace() {
+  const on = new Set([expr.eyes, talkOpen ? 'mouthTalk' : expr.mouth, ...(expr.extra || [])]);
+  for (const id of FACE_PARTS) {
+    const n = document.getElementById(id);
+    if (n) n.style.display = on.has(id) ? '' : 'none';
+  }
+}
+function setFace(name) {
+  expr = EXPRESSIONS[name] || EXPRESSIONS.neutral;
+  renderFace();
+}
+
+// Тряска всего персонажа от удара.
+function shake() {
   for (const el of [$('charSvg'), $('charImage'), $('idleVideo'), face]) {
     el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
   }
-  const show = (id, v) => { const n = document.getElementById(id); if (n) n.style.display = v ? '' : 'none'; };
-  show('eyesOpen', false); show('eyesHurt', true); show('mouthIdle', false); show('mouthHurt', true);
-  clearTimeout(hurt.t);
-  hurt.t = setTimeout(() => { show('eyesOpen', true); show('eyesHurt', false); show('mouthIdle', true); show('mouthHurt', false); }, ms);
+}
+
+// Движение головы: кадры {r: градусы, x, y: в % ширины сцены}. Пятна на лице двигаются вместе с головой.
+function headMove(frames, duration, easing = 'ease-in-out') {
+  const svgUnit = 1080 / 100; // 1% ширины сцены в единицах SVG
+  const head = document.getElementById('head');
+  const f = (k) => ({ r: 0, x: 0, y: 0, ...k });
+  const anims = [face.animate(frames.map(k => { k = f(k); return { transform: `translate(${k.x * U}px, ${k.y * U}px) rotate(${k.r}deg) translate(-50%, -50%)` }; }), { duration, easing })];
+  if (head) anims.push(head.animate(frames.map(k => { k = f(k); return { transform: `translate(${k.x * svgUnit}px, ${k.y * svgUnit}px) rotate(${k.r}deg)` }; }), { duration, easing }));
+  return Promise.all(anims.map(a => a.finished));
+}
+
+// Реакция: выражение лица + реплика голосом, потом снова спокойное лицо.
+async function react(p, exprName, { quiet = false, hold = 900 } = {}) {
+  setFace(exprName);
+  if (quiet) await sleep(hold);
+  else await say(p);
+  setFace('neutral');
+}
+
+// ---------- голос ----------
+// Реплика: свой аудиофайл (phrases[].file) или встроенная озвучка браузера по тексту.
+let speech = null;
+function stopSpeech() {
+  if (!speech) return;
+  clearInterval(speech.lips); clearTimeout(speech.timer);
+  speech.audio?.pause();
+  if (speech.tts) window.speechSynthesis?.cancel();
+  speech.bubble.remove();
+  talkOpen = false; renderFace();
+  speech.resolve();
+  speech = null;
+}
+
+function pickRuVoice() {
+  const list = window.speechSynthesis?.getVoices() || [];
+  const want = config.voice?.ttsVoice;
+  return list.find(v => want && v.name.includes(want))
+    || list.find(v => v.lang?.toLowerCase().startsWith('ru') && /male|pavel|dmitr|maxim|yuri/i.test(v.name))
+    || list.find(v => v.lang?.toLowerCase().startsWith('ru'))
+    || null;
+}
+
+function say(p) {
+  const phrases = p.phrases || [];
+  if (!phrases.length || config.voice?.enabled === false) return sleep(900);
+  stopSpeech();
+  const line = phrases[Math.floor(Math.random() * phrases.length)];
+  const v = config.voice || {};
+
+  return new Promise(resolve => {
+    const t = facePoint();
+    const bubble = document.createElement('div');
+    bubble.className = 'speech';
+    bubble.textContent = line.text || '';
+    bubble.style.left = t.x + 16 * U + 'px';
+    bubble.style.top = t.y - 17 * U + 'px';
+    if (line.text) stage.appendChild(bubble);
+
+    // "Губы": рот открывается/закрывается, пока идёт реплика
+    const lips = setInterval(() => { talkOpen = !talkOpen; renderFace(); }, 130);
+    speech = { bubble, lips, resolve };
+    // Реакция длится не меньше, чем нужно, чтобы прочитать облачко (даже если голоса нет)
+    const minMs = 900 + 55 * (line.text || '').length;
+    const started = performance.now();
+    const finish = () => {
+      const wait = Math.max(350, minMs - (performance.now() - started));
+      setTimeout(() => { if (speech && speech.bubble === bubble) stopSpeech(); }, wait);
+    };
+    speech.timer = setTimeout(finish, 9000);
+
+    if (line.file) {
+      const audio = new Audio(line.file);
+      audio.volume = v.volume ?? 1;
+      speech.audio = audio;
+      audio.onended = audio.onerror = finish;
+      audio.play().catch(finish);
+    } else if (v.tts !== false && window.speechSynthesis && line.text) {
+      const u = new SpeechSynthesisUtterance(line.text);
+      u.lang = 'ru-RU';
+      const voice = pickRuVoice();
+      if (voice) u.voice = voice;
+      u.rate = v.rate ?? 1;
+      u.pitch = v.pitch ?? .8;
+      u.volume = v.volume ?? 1;
+      u.onend = u.onerror = finish;
+      speech.tts = true;
+      window.speechSynthesis.speak(u);
+    } else {
+      finish();
+    }
+  });
 }
 
 // ---------- наказания ----------
+// Каждое: предчувствие (лицо до удара) -> удар -> реакция + реплика.
 const effects = {
-  async egg() {
+  async egg(p, o) {
+    setFace('surprised');
+    headMove([{}, { r: -4, y: -1 }, { r: -4, y: -1 }], 650);
     await throwAt('🥚', 9, { arc: 25 });
-    sfx.splat(); hurt();
+    sfx.splat(); shake(); setFace('hurt');
+    headMove([{ r: -4, y: -1 }, { r: 7, x: 1.5, y: 1 }, {}], 500, 'ease-out');
     stain(`<path d="${blobPath(46)}" fill="#fffaf0" opacity=".95"/><circle cx="${rand(42, 58)}" cy="${rand(42, 58)}" r="17" fill="#ffc21a"/><circle cx="46" cy="44" r="5" fill="#fff6c8"/>`,
       { dx: rand(-3, 3), dy: rand(-7, -3), sizeU: 17, drip: 6 });
     burst(['🥚'], 3, 3, { spread: 15, fall: 40 });
     floatText('ШЛЁП!', '#ffe14d', 8);
     await sleep(500);
+    await react(p, 'angry', o);
   },
 
-  async tomato() {
+  async tomato(p, o) {
+    // пытается увернуться
+    setFace('dodge');
+    headMove([{}, { r: -10, x: -3 }, { r: 8, x: 3 }, { r: -6, x: -2 }], 650);
     await throwAt('🍅', 10, { arc: 28 });
-    sfx.splat(); hurt();
+    sfx.splat(); shake(); setFace('hurt');
     stain(`<path d="${blobPath(48, 11, .45)}" fill="#d9261c" opacity=".92"/><g fill="#ffd9a0">${Array.from({ length: 6 }, () => `<ellipse cx="${rand(30, 70)}" cy="${rand(30, 70)}" rx="3" ry="2"/>`).join('')}</g>`,
       { dx: rand(-4, 4), dy: rand(-2, 3), sizeU: 19, drip: 8 });
     burst(['🍅', '💦'], 5, 3.5, { spread: 20, fall: 45 });
     floatText('ПЛЯХ!', '#ff5a4a', 8);
-    await sleep(500);
+    await sleep(450);
+    // мотает головой "нет-нет"
+    setFace('angry');
+    headMove([{}, { r: -8 }, { r: 8 }, { r: -8 }, { r: 8 }, {}], 900);
+    await react(p, 'angry', o);
   },
 
-  async watermelon() {
+  async watermelon(p, o) {
+    setFace('surprised');
+    headMove([{}, { r: 0, y: -2 }, { r: 0, y: -2 }], 800);
     await throwAt('🍉', 20, { arc: 20, duration: 800 });
-    sfx.crunch(); hurt(1400);
+    sfx.crunch(); shake(); setFace('hurt');
+    headMove([{ y: -2 }, { r: -14, y: -4 }, { r: 5, y: 1 }, {}], 700, 'ease-out');
     stain(`<path d="${blobPath(49, 13, .5)}" fill="#e2323f" opacity=".9"/><g fill="#1b1b1b">${Array.from({ length: 9 }, () => `<ellipse cx="${rand(25, 75)}" cy="${rand(25, 75)}" rx="2.2" ry="3.5" transform="rotate(${rand(0, 180)} 50 50)"/>`).join('')}</g>`,
-      { dy: 0, sizeU: 26, drip: 10, life: 9000 });
+      { dy: 9, dx: rand(-3, 3), sizeU: 19, drip: 10, life: 9000 });
     stain(`<path d="${blobPath(45, 8, .5)}" fill="#c9202e" opacity=".85"/>`, { dy: 22, dx: rand(-6, 6), sizeU: 20, life: 9000 });
     burst(['🍉', '🍉', '💦'], 10, 7, { spread: 35, fall: 70, duration: 1300 });
     floatText('ХРЯСЬ!', '#ff4d6d', 10);
-    await sleep(900);
+    await sleep(800);
+    // плачет, плечи трясутся
+    headMove([{}, { y: .6 }, {}, { y: .6 }, {}, { y: .6 }, {}], 1500);
+    await react(p, 'cry', { ...o, hold: 1400 });
   },
 
-  async brick() {
+  async brick(p, o) {
     const t = facePoint();
+    setFace('lookUp');
     const el = spawn('proj', '🧱', 0, 0, 15);
     sfx.whoosh();
     await el.animate([
       { transform: `translate(${t.x}px, ${-20 * U}px) translate(-50%,-50%) rotate(-20deg)` },
       { transform: `translate(${t.x}px, ${t.y - 10 * U}px) translate(-50%,-50%) rotate(15deg)` },
     ], { duration: 550, easing: 'cubic-bezier(.5,0,1,1)' }).finished;
-    sfx.bonk(); hurt(1800);
+    sfx.bonk(); shake(); setFace('hurt');
+    headMove([{}, { y: 2.5 }, {}], 300, 'ease-out');
     floatText('БАМ!', '#ffb02e', 11);
     const side = Math.random() < .5 ? -1 : 1;
     el.animate([
@@ -208,7 +349,10 @@ const effects = {
     // шишка
     stain(`<ellipse cx="50" cy="50" rx="30" ry="24" fill="#e0785e"/><ellipse cx="44" cy="44" rx="10" ry="7" fill="#ffb49e"/>`,
       { dy: -11, dx: rand(-4, 4), sizeU: 10, rot: 0, life: 9000 });
-    // звёздочки вокруг головы
+    await sleep(250);
+    // оглушён: глаза-спирали, голова ходит кругами, звёздочки
+    setFace('dizzy');
+    headMove([{}, { r: 9, x: 1 }, { r: 0, y: 1 }, { r: -9, x: -1 }, { r: 0, y: -.5 }, { r: 9, x: 1 }, {}], 1600);
     const stars = ['⭐', '💫', '⭐', '💫'].map(s => spawn('particle', s, 0, 0, 5));
     const start = performance.now();
     await new Promise(done => {
@@ -222,12 +366,15 @@ const effects = {
         if (k < 1) requestAnimationFrame(orbit); else { stars.forEach(s => s.remove()); done(); }
       })(start);
     });
+    await react(p, 'dizzy', o);
   },
 
-  async poop() {
+  async poop(p, o) {
     const t = facePoint();
     const bucket = spawn('proj', '🪣', 0, 0, 18);
     const top = t.y - 30 * U;
+    setFace('lookUp');
+    headMove([{}, { r: 0, y: -1.5 }, { r: 0, y: -1.5 }], 900);
     await bucket.animate([
       { transform: `translate(${t.x}px, ${-20 * U}px) translate(-50%,-50%) rotate(0)` },
       { transform: `translate(${t.x}px, ${top}px) translate(-50%,-50%) rotate(0)` },
@@ -246,13 +393,13 @@ const effects = {
     });
     fx.appendChild(stream);
     await stream.animate([{ height: '0px' }, { height: 45 * U + 'px' }], { duration: 350, fill: 'forwards' }).finished;
-    hurt(2500);
+    shake(); setFace('hurt');
     stain(`<path d="M5 45 Q10 5 50 8 Q90 5 95 45 L95 60 Q88 90 80 62 Q72 95 62 60 Q55 85 48 62 Q40 98 30 62 Q20 88 14 60 Q8 75 5 60Z" fill="#6b3f17" opacity=".96"/><path d="M25 25 Q50 12 75 25" stroke="#8d5a2b" stroke-width="5" fill="none"/>`,
-      { dy: -8, sizeU: 30, rot: 0, drip: 12, life: 10000 });
+      { dy: -17, sizeU: 29, rot: 0, drip: 4, life: 10000 });
     stain(`<path d="${blobPath(46, 10, .5)}" fill="#6b3f17" opacity=".9"/>`, { dy: 26, dx: rand(-5, 5), sizeU: 24, life: 10000 });
     burst(['💩', '💩', '🟤'], 12, 6, { spread: 30, fall: 55, duration: 1300 });
     floatText('ФУУУ!', '#b4ff5a', 10);
-    await sleep(900);
+    await sleep(700);
     stream.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400 }).finished.then(() => stream.remove());
     bucket.animate([{ opacity: 1 }, { opacity: 0, translate: `0 ${-30 * U}px` }], { duration: 500 }).finished.then(() => bucket.remove());
     // мухи
@@ -261,22 +408,26 @@ const effects = {
       const kf = Array.from({ length: 8 }, () => ({ transform: `translate(${t.x + rand(-18, 18) * U}px, ${t.y + rand(-22, 5) * U}px)` }));
       fly.animate(kf, { duration: 5000, iterations: 1, easing: 'ease-in-out' }).finished.then(() => fly.remove());
     }
-    await sleep(600);
+    // противно: морщится и отряхивается
+    setFace('disgust');
+    headMove([{}, { r: -6, x: -1 }, { r: 6, x: 1 }, { r: -6, x: -1 }, { r: 6, x: 1 }, { r: -3 }, {}], 1000);
+    await react(p, 'disgust', o);
   },
 };
 
-async function playEffect(p) {
+async function playEffect(p, opts = {}) {
   if (p.video) return playVideo(p.video);
   if (p.combo) {
     for (const id of p.combo) {
       const sub = byId[id];
-      if (sub) await playEffect(sub);
-      await sleep(250);
+      if (sub) await playEffect(sub, { quiet: true, hold: 500 });
+      await sleep(200);
     }
+    await react(p, 'cry', opts);
     return;
   }
   const run = effects[p.id] || effects.egg;
-  return run();
+  return run(p, opts);
 }
 
 function playVideo(src) {

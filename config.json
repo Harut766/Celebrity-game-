@@ -1,7 +1,6 @@
 {
   "tiktokUsername": "",
   "port": 3000,
-
   "character": {
     "name": "Вова",
     "image": "",
@@ -9,10 +8,16 @@
     "faceX": 50,
     "faceY": 44
   },
-
   "maxRepeatPerGift": 5,
   "maxQueue": 50,
-
+  "voice": {
+    "enabled": true,
+    "tts": true,
+    "ttsVoice": "",
+    "rate": 1,
+    "pitch": 0.8,
+    "volume": 1
+  },
   "punishments": [
     {
       "id": "egg",
@@ -21,8 +26,24 @@
       "title": "Яйцо в лоб",
       "titleArm": "Ձվով հարված դեմքին",
       "exampleGift": "🌹 Роза",
-      "gifts": ["Rose"],
-      "video": ""
+      "gifts": [
+        "Rose"
+      ],
+      "video": "",
+      "phrases": [
+        {
+          "text": "Это провокация!",
+          "file": ""
+        },
+        {
+          "text": "Кто кинул? Найти и наказать!",
+          "file": ""
+        },
+        {
+          "text": "Яйца — это к Пасхе, а не ко мне!",
+          "file": ""
+        }
+      ]
     },
     {
       "id": "tomato",
@@ -32,7 +53,21 @@
       "titleArm": "Լոլիկով հարված դեմքին",
       "exampleGift": "🫰 Finger Heart",
       "gifts": [],
-      "video": ""
+      "video": "",
+      "phrases": [
+        {
+          "text": "Опять санкции?!",
+          "file": ""
+        },
+        {
+          "text": "Помидоры — это к Турции вопрос!",
+          "file": ""
+        },
+        {
+          "text": "Всё идёт по плану…",
+          "file": ""
+        }
+      ]
     },
     {
       "id": "watermelon",
@@ -41,8 +76,25 @@
       "title": "Арбуз в лицо",
       "titleArm": "Ձմերուկի հարված դեմքին",
       "exampleGift": "🍩 Пончик",
-      "gifts": ["Doughnut", "Donut"],
-      "video": ""
+      "gifts": [
+        "Doughnut",
+        "Donut"
+      ],
+      "video": "",
+      "phrases": [
+        {
+          "text": "Я не плачу… это арбуз!",
+          "file": ""
+        },
+        {
+          "text": "Мы так не договаривались!",
+          "file": ""
+        },
+        {
+          "text": "Это всё НАТО…",
+          "file": ""
+        }
+      ]
     },
     {
       "id": "brick",
@@ -52,7 +104,21 @@
       "titleArm": "Կիրպիչով հարված դեմքին",
       "exampleGift": "💐 от 99 монет",
       "gifts": [],
-      "video": ""
+      "video": "",
+      "phrases": [
+        {
+          "text": "Где я? Какой сейчас год?",
+          "file": ""
+        },
+        {
+          "text": "Посмотрите мне в глаза… их тут четыре…",
+          "file": ""
+        },
+        {
+          "text": "Кирпич? Это что, от моего моста?",
+          "file": ""
+        }
+      ]
     },
     {
       "id": "poop",
@@ -62,7 +128,21 @@
       "titleArm": "Քաքը թափվում ա գլխին",
       "exampleGift": "🎁 от 299 монет",
       "gifts": [],
-      "video": ""
+      "video": "",
+      "phrases": [
+        {
+          "text": "Фу! Это что, импортозамещение?!",
+          "file": ""
+        },
+        {
+          "text": "Я же говорил — всё решится в сортире!",
+          "file": ""
+        },
+        {
+          "text": "Это не то, чем кажется!",
+          "file": ""
+        }
+      ]
     },
     {
       "id": "full",
@@ -73,7 +153,27 @@
       "exampleGift": "🦁 от 1000 монет",
       "gifts": [],
       "video": "",
-      "combo": ["egg", "tomato", "watermelon", "brick", "poop"]
+      "combo": [
+        "egg",
+        "tomato",
+        "watermelon",
+        "brick",
+        "poop"
+      ],
+      "phrases": [
+        {
+          "text": "Всё… Ухожу в отставку!",
+          "file": ""
+        },
+        {
+          "text": "Мама, забери меня отсюда!",
+          "file": ""
+        },
+        {
+          "text": "Хватит! Я всё понял!",
+          "file": ""
+        }
+      ]
     }
   ]
 }
