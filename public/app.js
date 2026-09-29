@@ -148,12 +148,13 @@ function floatText(text, color = '#fff', sizeU = 9) {
 // ---------- мимика ----------
 // Все части лица — группы в SVG (character.js). Выражение = какие глаза, рот и доп. слои показать.
 const FACE_PARTS = [
-  'eyesOpen', 'eyesHurt', 'eyesWide', 'eyesUp', 'eyesSquint', 'eyesDizzy', 'eyesCry',
-  'mouthIdle', 'mouthHurt', 'mouthO', 'mouthTalk', 'mouthGrit', 'mouthWobble', 'mouthDisgust',
+  'eyesOpen', 'eyesBlink', 'eyesHurt', 'eyesWide', 'eyesUp', 'eyesSquint', 'eyesDizzy', 'eyesCry',
+  'mouthIdle', 'mouthSmirk', 'mouthHurt', 'mouthO', 'mouthTalk', 'mouthGrit', 'mouthWobble', 'mouthDisgust',
   'browsAngry', 'faceGreen', 'faceRed',
 ];
 const EXPRESSIONS = {
   neutral:   { eyes: 'eyesOpen',   mouth: 'mouthIdle' },
+  smirk:     { eyes: 'eyesOpen',   mouth: 'mouthSmirk' },
   surprised: { eyes: 'eyesWide',   mouth: 'mouthO' },
   lookUp:    { eyes: 'eyesUp',     mouth: 'mouthO' },
   dodge:     { eyes: 'eyesSquint', mouth: 'mouthGrit' },
@@ -165,9 +166,11 @@ const EXPRESSIONS = {
 };
 let expr = EXPRESSIONS.neutral;
 let talkOpen = false;
+let blinking = false;
 
 function renderFace() {
-  const on = new Set([expr.eyes, talkOpen ? 'mouthTalk' : expr.mouth, ...(expr.extra || [])]);
+  const eyes = blinking && expr.eyes === 'eyesOpen' ? 'eyesBlink' : expr.eyes;
+  const on = new Set([eyes, talkOpen ? 'mouthTalk' : expr.mouth, ...(expr.extra || [])]);
   for (const id of FACE_PARTS) {
     const n = document.getElementById(id);
     if (n) n.style.display = on.has(id) ? '' : 'none';
@@ -275,6 +278,92 @@ function say(p) {
       finish();
     }
   });
+}
+
+
+// ---------- жизнь в покое ----------
+// Пока никто не дарит: моргает, водит глазами, листает газету, крутит головой, иногда говорит сам.
+const isIdle = () => !playing && !speech && expr === EXPRESSIONS.neutral;
+
+function lookAt(x, y) {
+  const pupils = document.getElementById('pupils');
+  if (pupils) pupils.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+function blinkLoop() {
+  setTimeout(async () => {
+    blinking = true; renderFace();
+    await sleep(120);
+    blinking = false; renderFace();
+    if (Math.random() < .2) { await sleep(160); blinking = true; renderFace(); await sleep(110); blinking = false; renderFace(); }
+    blinkLoop();
+  }, rand(2200, 5500));
+}
+
+function eyesLoop() {
+  setTimeout(() => {
+    if (isIdle()) lookAt(rand(-6, 6), rand(-2, 3));
+    eyesLoop();
+  }, rand(1200, 3500));
+}
+
+const idleActions = {
+  // читает газету: взгляд вниз, лёгкий кивок
+  async read() {
+    lookAt(rand(-3, 3), 4);
+    await headMove([{}, { r: 0, y: .5 }, { r: rand(-2, 2), y: .7 }, {}], 2400);
+  },
+  // перелистывает страницу
+  async flip() {
+    const page = document.getElementById('page');
+    if (!page) return;
+    lookAt(5, 3);
+    page.style.opacity = '1';
+    await page.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(-1)' }], { duration: 650, easing: 'ease-in-out' }).finished;
+    page.style.opacity = '0';
+  },
+  // оглядывается по сторонам
+  async lookAround() {
+    const side = Math.random() < .5 ? -1 : 1;
+    lookAt(side * 6, 0);
+    await headMove([{}, { r: side * 7, x: side * .6 }, { r: side * 7, x: side * .6 }, { r: -side * 5, x: -side * .4 }, {}], 2600);
+  },
+  // смотрит в камеру и ухмыляется
+  async smirk() {
+    lookAt(0, 0);
+    setFace('smirk');
+    await headMove([{}, { r: -4 }, { r: -4 }, {}], 1800);
+    if (expr === EXPRESSIONS.smirk) setFace('neutral');
+  },
+};
+
+function actionsLoop() {
+  setTimeout(async () => {
+    if (isIdle()) {
+      const names = Object.keys(idleActions);
+      try { await idleActions[names[Math.floor(Math.random() * names.length)]](); } catch {}
+    }
+    actionsLoop();
+  }, rand(4000, 9000));
+}
+
+function talkLoop() {
+  const every = (config.idle?.talkEverySec ?? 40) * 1000;
+  if (!every || !config.idle?.phrases?.length) return;
+  setTimeout(async () => {
+    if (isIdle()) {
+      lookAt(0, 0);
+      setFace('smirk');
+      await say({ phrases: config.idle.phrases });
+      if (expr === EXPRESSIONS.smirk) setFace('neutral');
+    }
+    talkLoop();
+  }, rand(every * .7, every * 1.3));
+}
+
+function startIdle() {
+  if (config.idle?.enabled === false || !document.getElementById('head')) return;
+  blinkLoop(); eyesLoop(); actionsLoop(); talkLoop();
 }
 
 // ---------- наказания ----------
@@ -463,6 +552,7 @@ async function playNext() {
   const p = byId[hit.punishmentId];
   if (p) {
     showBanner(hit, p);
+    lookAt(0, 0);
     highlight(p.id);
     try { await playEffect(p); } catch (e) { console.error(e); }
     await sleep(250);
@@ -546,5 +636,6 @@ function connectWs() {
   byId = Object.fromEntries(config.punishments.map(p => [p.id, p]));
   resize();
   renderScene();
+  startIdle();
   connectWs();
 })();

@@ -38,17 +38,33 @@ window.defaultCharacterSvg = (signText) => `
   <text x="540" y="365" font-size="58" font-family="'Noto Sans Armenian', Arial" text-anchor="middle" fill="#3b2413" font-weight="700">${signText}</text>
   <rect x="690" y="520" width="70" height="90" rx="10" fill="#f4f1ea"/><rect x="718" y="600" width="14" height="60" fill="#f4f1ea"/>
 
-  <!-- ведро-унитаз -->
-  <path d="M410 1340 H670 L650 1560 H430Z" fill="#8d949c" stroke="#5c6168" stroke-width="8"/>
+  <!-- унитаз: ободок на уровне бёдер, чтобы было видно, что он сидит -->
+  <path d="M430 1300 Q430 1470 480 1500 H600 Q650 1470 650 1300Z" fill="#e9eef2" stroke="#b7c0c8" stroke-width="6"/>
+  <rect x="470" y="1495" width="140" height="55" rx="10" fill="#dfe5ea" stroke="#b7c0c8" stroke-width="6"/>
+  <ellipse cx="540" cy="1285" rx="205" ry="42" fill="#f4f7f9" stroke="#b7c0c8" stroke-width="6"/>
 
-  <!-- брюки костюма, туфли -->
-  <rect x="400" y="1250" width="130" height="160" rx="26" fill="#23262e"/>
-  <rect x="550" y="1250" width="130" height="160" rx="26" fill="#23262e"/>
-  <rect x="425" y="1390" width="75" height="165" rx="20" fill="#1c1f26"/>
-  <rect x="580" y="1390" width="75" height="165" rx="20" fill="#1c1f26"/>
-  <ellipse cx="455" cy="1570" rx="62" ry="24" fill="#0f0f12"/><ellipse cx="625" cy="1570" rx="62" ry="24" fill="#0f0f12"/>
-  <ellipse cx="440" cy="1562" rx="20" ry="6" fill="#4a4a55"/><ellipse cx="610" cy="1562" rx="20" ry="6" fill="#4a4a55"/>
+  <!-- сидит: трусы в сердечках, штаны спущены до щиколоток -->
+  <defs>
+    <pattern id="hearts" width="44" height="44" patternUnits="userSpaceOnUse">
+      <rect width="44" height="44" fill="#f7f7fb"/>
+      <path d="M22 30 L12 20 A6 6 0 0 1 22 13 A6 6 0 0 1 32 20Z" fill="#e0314b"/>
+    </pattern>
+  </defs>
+  <path d="M385 1235 Q380 1330 420 1350 H520 Q545 1320 540 1235Z" fill="url(#hearts)" stroke="#c9c9d4" stroke-width="4"/>
+  <path d="M695 1235 Q700 1330 660 1350 H560 Q535 1320 540 1235Z" fill="url(#hearts)" stroke="#c9c9d4" stroke-width="4"/>
+  <ellipse cx="465" cy="1355" rx="58" ry="34" fill="#efc0a4"/>
+  <ellipse cx="615" cy="1355" rx="58" ry="34" fill="#efc0a4"/>
+  <path d="M430 1360 L438 1500 H494 L500 1360Z" fill="#efc0a4"/>
+  <path d="M580 1360 L586 1500 H642 L650 1360Z" fill="#efc0a4"/>
+  <path d="M452 1400 q8 6 16 0 M460 1430 q8 6 16 0 M598 1405 q8 6 16 0 M606 1438 q8 6 16 0" stroke="#d9a386" stroke-width="3" fill="none"/>
+  <path d="M398 1480 Q465 1455 532 1480 Q540 1510 525 1535 Q465 1550 405 1535 Q390 1510 398 1480Z" fill="#23262e"/>
+  <path d="M548 1480 Q615 1455 682 1480 Q690 1510 675 1535 Q615 1550 555 1535 Q540 1510 548 1480Z" fill="#23262e"/>
+  <path d="M410 1500 Q465 1490 520 1505 M560 1505 Q615 1490 670 1500" stroke="#3a3e4a" stroke-width="5" fill="none"/>
+  <ellipse cx="455" cy="1565" rx="62" ry="24" fill="#0f0f12"/><ellipse cx="625" cy="1565" rx="62" ry="24" fill="#0f0f12"/>
+  <ellipse cx="440" cy="1557" rx="20" ry="6" fill="#4a4a55"/><ellipse cx="610" cy="1557" rx="20" ry="6" fill="#4a4a55"/>
 
+  <!-- верх тела: дышит (CSS-анимация #upper) -->
+  <g id="upper">
   <!-- пиджак, рубашка, галстук -->
   <path d="M410 870 Q540 830 670 870 L700 1275 H380Z" fill="#2b2f3a"/>
   <path d="M495 850 L540 990 L585 850 Q540 840 495 850Z" fill="#f4f4f6"/>
@@ -65,6 +81,10 @@ window.defaultCharacterSvg = (signText) => `
       ${[1060,1090,1120,1150,1180,1210].map(y => `<rect x="355" y="${y}" width="160" height="10"/><rect x="565" y="${y}" width="160" height="10"/>`).join('')}
     </g>
     <rect x="365" y="1040" width="120" height="14" fill="#333"/>
+    <g id="page" style="opacity:0">
+      <rect x="540" y="1030" width="210" height="230" fill="#f5efdf" stroke="#b9ad90" stroke-width="4"/>
+      <g fill="#8e8672">${[1060,1090,1120,1150,1180,1210].map(y => `<rect x="565" y="${y}" width="160" height="10"/>`).join('')}</g>
+    </g>
   </g>
   <path d="M420 885 Q345 985 335 1100" stroke="#2b2f3a" stroke-width="78" fill="none" stroke-linecap="round"/>
   <path d="M660 885 Q735 965 745 1070" stroke="#2b2f3a" stroke-width="78" fill="none" stroke-linecap="round"/>
@@ -93,8 +113,10 @@ window.defaultCharacterSvg = (signText) => `
       <path d="M470 655 Q492 648 515 656 M565 656 Q588 648 610 655" stroke="#a8906f" stroke-width="7" fill="none" stroke-linecap="round"/>
       <path d="M472 682 Q493 670 514 682 Q493 690 472 682Z" fill="#fff"/>
       <path d="M566 682 Q587 670 608 682 Q587 690 566 682Z" fill="#fff"/>
-      <circle cx="493" cy="681" r="7" fill="#6a8fb0"/><circle cx="587" cy="681" r="7" fill="#6a8fb0"/>
-      <circle cx="493" cy="681" r="3" fill="#1b1b1b"/><circle cx="587" cy="681" r="3" fill="#1b1b1b"/>
+      <g id="pupils">
+        <circle cx="493" cy="681" r="7" fill="#6a8fb0"/><circle cx="587" cy="681" r="7" fill="#6a8fb0"/>
+        <circle cx="493" cy="681" r="3" fill="#1b1b1b"/><circle cx="587" cy="681" r="3" fill="#1b1b1b"/>
+      </g>
       <path d="M470 678 Q493 666 516 678 M564 678 Q587 666 610 678" stroke="#c99478" stroke-width="5" fill="none"/>
       <path d="M476 694 Q493 700 510 694 M570 694 Q587 700 604 694" stroke="#dba589" stroke-width="3" fill="none"/>
     </g>
@@ -113,6 +135,11 @@ window.defaultCharacterSvg = (signText) => `
     <!-- мимика: все группы скрыты, app.js включает нужные (setFace) -->
     <path id="faceGreen" d="M540 545 Q650 545 655 650 Q660 740 620 800 Q585 845 540 848 Q495 845 460 800 Q420 740 425 650 Q430 545 540 545Z" fill="#7bbf3a" opacity=".35" style="display:none"/>
     <path id="faceRed" d="M540 545 Q650 545 655 650 Q660 740 620 800 Q585 845 540 848 Q495 845 460 800 Q420 740 425 650 Q430 545 540 545Z" fill="#e8352a" opacity=".22" style="display:none"/>
+    <g id="eyesBlink" style="display:none">
+      <path d="M470 655 Q492 650 515 657 M565 657 Q588 650 610 655" stroke="#a8906f" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M472 682 Q493 688 514 682 M566 682 Q587 688 608 682" stroke="#3a2e28" stroke-width="6" fill="none" stroke-linecap="round"/>
+    </g>
+    <path id="mouthSmirk" d="M512 802 Q545 808 574 788" stroke="#b56a5c" stroke-width="7" fill="none" stroke-linecap="round" style="display:none"/>
     <g id="eyesWide" style="display:none">
       <path d="M468 638 Q492 622 516 636 M564 636 Q588 622 612 638" stroke="#a8906f" stroke-width="7" fill="none" stroke-linecap="round"/>
       <circle cx="493" cy="680" r="16" fill="#fff"/><circle cx="587" cy="680" r="16" fill="#fff"/>
@@ -156,6 +183,7 @@ window.defaultCharacterSvg = (signText) => `
       <path d="M508 808 Q520 796 532 806 T556 806 T574 800" stroke="#8a3b30" stroke-width="8" fill="none" stroke-linecap="round"/>
     </g>
     <path d="M522 830 Q540 838 558 830" stroke="#e0ad92" stroke-width="4" fill="none"/>
+  </g>
   </g>
   </g>
 </svg>`;
