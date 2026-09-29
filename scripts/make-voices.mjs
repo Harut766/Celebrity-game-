@@ -37,7 +37,9 @@ if (args.list) {
     console.log(out.split('\n').filter(l => /ru_RU/.test(l)).join('\n') || 'Русских голосов нет: Системные настройки → Универсальный доступ → Устный контент → Управление голосами');
   } else {
     const { MsEdgeTTS } = await import('msedge-tts');
-    const voices = await new MsEdgeTTS().getVoices();
+    let voices;
+    try { voices = await new MsEdgeTTS().getVoices(); }
+    catch (e) { console.error(`Не удалось получить список голосов: ${e.message}`); process.exit(1); }
     const ru = voices.filter(v => v.Locale === 'ru-RU' || /Multilingual/.test(v.ShortName));
     console.log('Русские:');
     ru.filter(v => v.Locale === 'ru-RU').forEach(v => console.log(`  ${v.ShortName}  (${v.Gender === 'Male' ? 'мужской' : 'женский'})`));
