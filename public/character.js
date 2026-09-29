@@ -1,4 +1,4 @@
-// Персонаж по умолчанию: мужик в деревенском туалете с газетой.
+// Персонаж по умолчанию: карикатура на политика в костюме, сидит в деревенском туалете с газетой.
 // Рисуется, только если в config.json не задано своё фото/видео.
 // Центр головы — (540, 840) в координатах 1080x1920, т.е. faceX 50%, faceY 44%.
 window.defaultCharacterSvg = (signText) => `
@@ -41,17 +41,21 @@ window.defaultCharacterSvg = (signText) => `
   <!-- ведро-унитаз -->
   <path d="M410 1340 H670 L650 1560 H430Z" fill="#8d949c" stroke="#5c6168" stroke-width="8"/>
 
-  <!-- ноги, шорты -->
-  <rect x="400" y="1250" width="130" height="150" rx="30" fill="url(#plaid)"/>
-  <rect x="550" y="1250" width="130" height="150" rx="30" fill="url(#plaid)"/>
-  <rect x="420" y="1390" width="80" height="170" rx="30" fill="#e0a882"/>
-  <rect x="580" y="1390" width="80" height="170" rx="30" fill="#e0a882"/>
-  <ellipse cx="455" cy="1570" rx="60" ry="24" fill="#3a2a22"/><ellipse cx="625" cy="1570" rx="60" ry="24" fill="#3a2a22"/>
+  <!-- брюки костюма, туфли -->
+  <rect x="400" y="1250" width="130" height="160" rx="26" fill="#23262e"/>
+  <rect x="550" y="1250" width="130" height="160" rx="26" fill="#23262e"/>
+  <rect x="425" y="1390" width="75" height="165" rx="20" fill="#1c1f26"/>
+  <rect x="580" y="1390" width="75" height="165" rx="20" fill="#1c1f26"/>
+  <ellipse cx="455" cy="1570" rx="62" ry="24" fill="#0f0f12"/><ellipse cx="625" cy="1570" rx="62" ry="24" fill="#0f0f12"/>
+  <ellipse cx="440" cy="1562" rx="20" ry="6" fill="#4a4a55"/><ellipse cx="610" cy="1562" rx="20" ry="6" fill="#4a4a55"/>
 
-  <!-- туловище в майке -->
-  <path d="M420 860 Q540 820 660 860 L690 1270 H390Z" fill="#e0a882"/>
-  <path d="M440 880 Q540 960 640 880 L670 1270 H410Z" fill="#f2f2f0"/>
-  <path d="M455 880 L470 840 M625 880 L610 840" stroke="#f2f2f0" stroke-width="22"/>
+  <!-- пиджак, рубашка, галстук -->
+  <path d="M410 870 Q540 830 670 870 L700 1275 H380Z" fill="#2b2f3a"/>
+  <path d="M495 850 L540 990 L585 850 Q540 840 495 850Z" fill="#f4f4f6"/>
+  <path d="M528 870 L552 870 L560 900 L548 1010 L540 1025 L532 1010 L520 900Z" fill="#7a1f2b"/>
+  <path d="M528 870 L552 870 L547 895 L533 895Z" fill="#5e1520"/>
+  <path d="M495 850 L470 870 L520 1000 Z M585 850 L610 870 L560 1000 Z" fill="#20232c"/>
+  <circle cx="620" cy="945" r="7" fill="#c9a24a"/>
 
   <!-- газета и руки -->
   <g transform="rotate(-6 540 1130)">
@@ -62,30 +66,50 @@ window.defaultCharacterSvg = (signText) => `
     </g>
     <rect x="365" y="1040" width="120" height="14" fill="#333"/>
   </g>
-  <ellipse cx="330" cy="1140" rx="42" ry="36" fill="#e0a882"/>
-  <ellipse cx="750" cy="1110" rx="42" ry="36" fill="#e0a882"/>
-  <path d="M420 880 Q340 980 330 1110" stroke="#e0a882" stroke-width="70" fill="none" stroke-linecap="round"/>
-  <path d="M660 880 Q740 960 750 1080" stroke="#e0a882" stroke-width="70" fill="none" stroke-linecap="round"/>
+  <path d="M420 885 Q345 985 335 1100" stroke="#2b2f3a" stroke-width="78" fill="none" stroke-linecap="round"/>
+  <path d="M660 885 Q735 965 745 1070" stroke="#2b2f3a" stroke-width="78" fill="none" stroke-linecap="round"/>
+  <rect x="300" y="1100" width="70" height="22" rx="8" fill="#f4f4f6" transform="rotate(10 335 1111)"/>
+  <rect x="712" y="1068" width="70" height="22" rx="8" fill="#f4f4f6" transform="rotate(-8 747 1079)"/>
+  <ellipse cx="330" cy="1145" rx="40" ry="34" fill="#f0c4a8"/>
+  <ellipse cx="750" cy="1112" rx="40" ry="34" fill="#f0c4a8"/>
 
-  <!-- голова -->
+  <!-- голова: карикатура (залысины, узкое лицо, прищур, тонкие губы) -->
   <g id="head">
-    <rect x="500" y="780" width="80" height="80" fill="#d89c75"/>
-    <ellipse cx="425" cy="700" rx="26" ry="38" fill="#d89c75"/>
-    <ellipse cx="655" cy="700" rx="26" ry="38" fill="#d89c75"/>
-    <ellipse cx="540" cy="690" rx="120" ry="140" fill="#e3a987"/>
-    <path d="M425 650 Q420 560 470 560 M655 650 Q660 560 610 560" stroke="#6d6a66" stroke-width="30" fill="none" stroke-linecap="round"/>
-    <path d="M470 560 Q540 540 610 560" stroke="#6d6a66" stroke-width="10" fill="none" opacity=".5"/>
+    <path d="M505 790 L575 790 L585 860 L495 860Z" fill="#e3b196"/>
+    <path d="M412 690 Q395 650 415 640 Q432 650 432 700 Q430 740 418 740 Q405 730 412 690Z" fill="#e8b89c"/>
+    <path d="M668 690 Q685 650 665 640 Q648 650 648 700 Q650 740 662 740 Q675 730 668 690Z" fill="#e8b89c"/>
+    <path d="M540 545 Q650 545 655 650 Q660 740 620 800 Q585 845 540 848 Q495 845 460 800 Q420 740 425 650 Q430 545 540 545Z" fill="#f0c4a8"/>
+    <!-- залысины: редкие светлые волосы по бокам и на макушке -->
+    <path d="M430 660 Q425 585 470 565" stroke="#b8a488" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M650 660 Q655 585 610 565" stroke="#b8a488" stroke-width="22" fill="none" stroke-linecap="round"/>
+    <path d="M500 560 Q540 548 580 560" stroke="#c8b59a" stroke-width="7" fill="none" opacity=".6"/>
+    <path d="M505 572 Q540 562 575 572" stroke="#c8b59a" stroke-width="5" fill="none" opacity=".45"/>
+    <!-- высокий лоб, морщины -->
+    <path d="M495 600 Q540 592 585 600" stroke="#d9a88c" stroke-width="3" fill="none"/>
+    <path d="M505 615 Q540 609 575 615" stroke="#d9a88c" stroke-width="3" fill="none"/>
+    <!-- скулы -->
+    <path d="M462 720 Q480 745 500 740 M618 720 Q600 745 580 740" stroke="#dfa98c" stroke-width="5" fill="none" stroke-linecap="round"/>
     <g id="eyesOpen">
-      <path d="M470 640 L520 632 M560 632 L610 640" stroke="#3a2e28" stroke-width="12" stroke-linecap="round"/>
-      <ellipse cx="495" cy="672" rx="14" ry="10" fill="#2a2320"/><ellipse cx="585" cy="672" rx="14" ry="10" fill="#2a2320"/>
+      <path d="M470 655 Q492 648 515 656 M565 656 Q588 648 610 655" stroke="#a8906f" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M472 682 Q493 670 514 682 Q493 690 472 682Z" fill="#fff"/>
+      <path d="M566 682 Q587 670 608 682 Q587 690 566 682Z" fill="#fff"/>
+      <circle cx="493" cy="681" r="7" fill="#6a8fb0"/><circle cx="587" cy="681" r="7" fill="#6a8fb0"/>
+      <circle cx="493" cy="681" r="3" fill="#1b1b1b"/><circle cx="587" cy="681" r="3" fill="#1b1b1b"/>
+      <path d="M470 678 Q493 666 516 678 M564 678 Q587 666 610 678" stroke="#c99478" stroke-width="5" fill="none"/>
+      <path d="M476 694 Q493 700 510 694 M570 694 Q587 700 604 694" stroke="#dba589" stroke-width="3" fill="none"/>
     </g>
-    <g id="eyesHurt" style="display:none" stroke="#2a2320" stroke-width="10" stroke-linecap="round">
-      <path d="M480 660 L510 684 M510 660 L480 684"/><path d="M570 660 L600 684 M600 660 L570 684"/>
+    <g id="eyesHurt" style="display:none" stroke="#2a2320" stroke-width="9" stroke-linecap="round">
+      <path d="M478 670 L508 692 M508 670 L478 692"/><path d="M572 670 L602 692 M602 670 L572 692"/>
     </g>
-    <path d="M530 680 Q520 730 540 740 Q560 745 555 720" fill="#d18d68"/>
-    <path d="M470 770 Q505 745 540 760 Q575 745 610 770 Q575 790 540 775 Q505 790 470 770Z" fill="#3a2e28"/>
-    <path id="mouthIdle" d="M510 800 Q540 810 570 800" stroke="#7a3b30" stroke-width="8" fill="none" stroke-linecap="round"/>
-    <ellipse id="mouthHurt" cx="540" cy="808" rx="26" ry="22" fill="#5a1a1a" style="display:none"/>
+    <!-- прямой нос -->
+    <path d="M540 690 L532 755 Q540 766 552 758" stroke="#d29a7e" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M520 760 Q528 770 538 764 M560 760 Q552 770 542 764" stroke="#c98f73" stroke-width="4" fill="none"/>
+    <!-- носогубки -->
+    <path d="M505 770 Q495 795 505 815 M575 770 Q585 795 575 815" stroke="#dca78b" stroke-width="4" fill="none"/>
+    <!-- тонкие губы, лёгкая ухмылка -->
+    <path id="mouthIdle" d="M512 800 Q540 806 572 796" stroke="#b56a5c" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <ellipse id="mouthHurt" cx="540" cy="805" rx="22" ry="18" fill="#5a1a1a" style="display:none"/>
+    <path d="M522 830 Q540 838 558 830" stroke="#e0ad92" stroke-width="4" fill="none"/>
   </g>
   </g>
 </svg>`;
