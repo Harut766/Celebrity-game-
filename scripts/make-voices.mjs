@@ -26,7 +26,7 @@ const args = Object.fromEntries(
   }),
 );
 const engine = args.engine || 'edge';
-const voice = args.voice || (engine === 'mac' ? 'Yuri' : 'ru-RU-DmitryNeural');
+const voice = args.voice || (engine === 'mac' ? 'Yuri' : 'it-IT-GiuseppeMultilingualNeural');
 const pitch = args.pitch || '-10Hz';
 const rate = args.rate || '-5%';
 const dry = Boolean(args.dry);
