@@ -150,25 +150,26 @@ function floatText(text, color = '#fff', sizeU = 9) {
 const FACE_PARTS = [
   'eyesOpen', 'eyesBlink', 'eyesHappy', 'eyesWink', 'eyesDown', 'eyesHurt', 'eyesWide', 'eyesUp', 'eyesSquint', 'eyesDizzy', 'eyesCry',
   'mouthIdle', 'mouthSmirk', 'mouthLaugh', 'mouthYawn', 'mouthFrown', 'mouthHurt', 'mouthO', 'mouthTalk', 'mouthGrit', 'mouthWobble', 'mouthDisgust',
-  'browsAngry', 'faceGreen', 'faceRed',
+  'browsNormal', 'browsUp', 'browsSad', 'browsPinch', 'browsAngry', 'faceGreen', 'faceRed',
 ];
+// brows — отдельный слой бровей (у модели Путина брови нарисованы внутри глаз, там браузер просто не найдёт эти id)
 const EXPRESSIONS = {
   neutral:   { eyes: 'eyesOpen',   mouth: 'mouthIdle' },
-  smirk:     { eyes: 'eyesOpen',   mouth: 'mouthSmirk' },
+  smirk:     { eyes: 'eyesOpen',   mouth: 'mouthSmirk',  brows: 'browsPinch' },
   reading:   { eyes: 'eyesDown',   mouth: 'mouthIdle' },
-  laugh:     { eyes: 'eyesHappy',  mouth: 'mouthLaugh' },
-  wink:      { eyes: 'eyesWink',   mouth: 'mouthSmirk' },
-  yawn:      { eyes: 'eyesBlink',  mouth: 'mouthYawn' },
-  grumpy:    { eyes: 'eyesOpen',   mouth: 'mouthFrown', extra: ['browsAngry'] },
-  suspicious:{ eyes: 'eyesSquint', mouth: 'mouthFrown' },
-  surprised: { eyes: 'eyesWide',   mouth: 'mouthO' },
-  lookUp:    { eyes: 'eyesUp',     mouth: 'mouthO' },
-  dodge:     { eyes: 'eyesSquint', mouth: 'mouthGrit' },
-  hurt:      { eyes: 'eyesHurt',   mouth: 'mouthHurt', extra: ['faceRed'] },
-  angry:     { eyes: 'eyesOpen',   mouth: 'mouthGrit', extra: ['browsAngry', 'faceRed'] },
-  dizzy:     { eyes: 'eyesDizzy',  mouth: 'mouthWobble' },
-  cry:       { eyes: 'eyesCry',    mouth: 'mouthWobble' },
-  disgust:   { eyes: 'eyesSquint', mouth: 'mouthDisgust', extra: ['faceGreen'] },
+  laugh:     { eyes: 'eyesHappy',  mouth: 'mouthLaugh',  brows: 'browsUp' },
+  wink:      { eyes: 'eyesWink',   mouth: 'mouthSmirk',  brows: 'browsUp' },
+  yawn:      { eyes: 'eyesBlink',  mouth: 'mouthYawn',   brows: 'browsUp' },
+  grumpy:    { eyes: 'eyesOpen',   mouth: 'mouthFrown',  brows: 'browsAngry' },
+  suspicious:{ eyes: 'eyesSquint', mouth: 'mouthFrown',  brows: 'browsPinch' },
+  surprised: { eyes: 'eyesWide',   mouth: 'mouthO',      brows: 'browsUp' },
+  lookUp:    { eyes: 'eyesUp',     mouth: 'mouthO',      brows: 'browsUp' },
+  dodge:     { eyes: 'eyesSquint', mouth: 'mouthGrit',   brows: 'browsPinch' },
+  hurt:      { eyes: 'eyesHurt',   mouth: 'mouthHurt',   brows: 'browsPinch', extra: ['faceRed'] },
+  angry:     { eyes: 'eyesOpen',   mouth: 'mouthGrit',   brows: 'browsAngry', extra: ['faceRed'] },
+  dizzy:     { eyes: 'eyesDizzy',  mouth: 'mouthWobble', brows: 'browsSad' },
+  cry:       { eyes: 'eyesCry',    mouth: 'mouthWobble', brows: 'browsSad' },
+  disgust:   { eyes: 'eyesSquint', mouth: 'mouthDisgust', brows: 'browsPinch', extra: ['faceGreen'] },
 };
 let expr = EXPRESSIONS.neutral;
 let talkOpen = false;
@@ -176,7 +177,9 @@ let blinking = false;
 
 function renderFace() {
   const eyes = blinking && expr.eyes === 'eyesOpen' ? 'eyesBlink' : expr.eyes;
-  const on = new Set([eyes, talkOpen ? 'mouthTalk' : expr.mouth, ...(expr.extra || [])]);
+  // брови по умолчанию — обычные
+  const brows = expr.brows || 'browsNormal';
+  const on = new Set([eyes, brows, talkOpen ? 'mouthTalk' : expr.mouth, ...(expr.extra || [])]);
   for (const id of FACE_PARTS) {
     const n = document.getElementById(id);
     if (n) n.style.display = on.has(id) ? '' : 'none';
