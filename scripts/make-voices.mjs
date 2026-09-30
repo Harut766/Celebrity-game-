@@ -178,7 +178,8 @@ for (const [key, phrases] of phraseLists()) {
     const hash = createHash('md5').update(`${engine}|${voice}|${pitch}|${rate}|${ph.text}`).digest('hex').slice(0, 6);
     const name = `${key}-${i + 1}-${hash}.${ext}`;
     const disk = new URL(name, OUT_DIR);
-    if (ph.file === WEB_DIR + name && existsSync(disk)) { skipped++; continue; }
+    // Файл с таким текстом и голосом уже есть на диске — просто подставляем его
+    if (existsSync(disk)) { ph.file = WEB_DIR + name; skipped++; continue; }
     if (dry) { console.log(`[dry] ${name}  «${ph.text}»`); continue; }
     try {
       await synth(ph.text, fileURLToPath(disk));

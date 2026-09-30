@@ -685,7 +685,7 @@ function renderScene() {
     $('charImage').src = c.image; $('charImage').hidden = false;
     $('charSvg').innerHTML = '';
   } else {
-    $('charSvg').innerHTML = window.defaultCharacterSvg(esc(c.name || ''));
+    $('charSvg').innerHTML = window.defaultCharacterSvg(esc(c.name || ''), c.model);
   }
   face.style.left = c.faceX + '%';
   face.style.top = c.faceY + '%';

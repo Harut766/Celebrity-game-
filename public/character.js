@@ -1,7 +1,8 @@
 // Персонаж по умолчанию: карикатура на политика в костюме, сидит в деревенском туалете с газетой.
 // Рисуется, только если в config.json не задано своё фото/видео.
+// Модель выбирается в config.json -> character.model: "erdogan" или "putin".
 // Центр головы — (540, 840) в координатах 1080x1920, т.е. faceX 50%, faceY 44%.
-window.defaultCharacterSvg = (signText) => `
+const baseCharacterSvg = (signText) => `
 <svg viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
   <defs>
     <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
@@ -228,3 +229,32 @@ window.defaultCharacterSvg = (signText) => `
   </g>
   </g>
 </svg>`;
+
+// Эрдоган: та же фигура, но другая голова — седые волосы зачёсаны назад, густые тёмные брови,
+// седые усы, нос крупнее, кожа смуглее, глаза тёмные.
+function erdoganize(svg) {
+  const hair = `
+    <!-- волосы: седые, густые, зачёсаны назад, лоб открыт -->
+    <path d="M426 672 Q414 588 452 560 Q496 526 540 528 Q584 526 628 560 Q666 588 654 672 Q646 636 636 612 Q604 588 540 594 Q476 588 444 612 Q434 636 426 672Z" fill="#d2d2d0"/>
+    <path d="M462 580 Q500 556 540 556 M580 560 Q606 566 626 584 M470 598 Q505 580 540 578 Q575 578 612 596" stroke="#b3b3b0" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M428 668 Q424 640 432 620 M652 668 Q656 640 648 620" stroke="#bdbdba" stroke-width="14" fill="none" stroke-linecap="round"/>`;
+  const mustache = `
+    <!-- крупный нос и седые усы -->
+    <ellipse cx="542" cy="752" rx="17" ry="12" fill="#d69c78"/>
+    <path d="M486 786 Q496 760 540 764 Q584 760 594 786 Q580 798 562 791 Q540 799 518 791 Q500 798 486 786Z" fill="#8f8c88"/>
+    <path d="M500 780 Q520 770 538 774 M542 774 Q560 770 580 780" stroke="#b5b2ad" stroke-width="3" fill="none"/>`;
+  return svg
+    .replace(/\s*<!-- залысины[\s\S]*?(?=\s*<!-- высокий лоб)/, hair)
+    .replace(/(\n\s*<\/g>\n\s*<\/g>\n\s*<\/g>\n<\/svg>)$/, mustache + '$1')
+    .replaceAll('stroke="#a8906f" stroke-width="7"', 'stroke="#4d4843" stroke-width="11"')
+    .replaceAll('#a8906f', '#4d4843')
+    .replaceAll('#8a7560', '#3a3632')
+    .replaceAll('#6a8fb0', '#4a3226')
+    .replaceAll('#f0c4a8', '#e3ae88')
+    .replaceAll('#efc0a4', '#e0aa85')
+    .replaceAll('#e8b89c', '#d9a37f')
+    .replaceAll('#e3b196', '#d6a07c');
+}
+
+window.defaultCharacterSvg = (signText, model = 'erdogan') =>
+  model === 'putin' ? baseCharacterSvg(signText) : erdoganize(baseCharacterSvg(signText));
