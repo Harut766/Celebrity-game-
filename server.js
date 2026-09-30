@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { WebSocketServer } from 'ws';
 import { TikTokLiveConnection, WebcastEvent, ControlEvent } from 'tiktok-live-connector';
-import { giftToHits, isFinalGiftEvent, normalizeTikTokGift } from './src/punish.js';
+import { giftToHits, isFinalGiftEvent, normalizeTikTokGift, looksArmenian } from './src/punish.js';
 
 const CONFIG_PATH = new URL('./config.json', import.meta.url);
 const loadConfig = () => JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
@@ -26,7 +26,7 @@ app.get('/api/config', (_req, res) => {
 // Тестовый подарок без эфира: POST /api/test {"coins": 30, "user": "Тест", "repeatCount": 2}
 app.post('/api/test', (req, res) => {
   const { coins = 1, giftName = '', user = 'Тест', repeatCount = 1 } = req.body || {};
-  const hits = handleGift({ coins: Number(coins), giftName, user, repeatCount: Number(repeatCount) });
+  const hits = handleGift({ coins: Number(coins), giftName, user, login: user, repeatCount: Number(repeatCount) });
   res.json({ hits: hits.length });
 });
 
@@ -52,7 +52,9 @@ wss.on('connection', ws => ws.send(JSON.stringify({ type: 'status', status })));
 function handleGift(gift) {
   config = loadConfig();
   const hits = giftToHits(config, gift);
-  console.log(`[gift] ${gift.user}: ${gift.giftName || '?'} (${gift.coins} мон.) x${gift.repeatCount} -> ${hits[0]?.punishmentId ?? 'ничего'} x${hits.length}`);
+  const armenian = config.armenian?.enabled !== false && looksArmenian(config, gift.user, gift.login);
+  for (const hit of hits) hit.armenian = armenian;
+  console.log(`[gift] ${gift.user}: ${gift.giftName || '?'} (${gift.coins} мон.) x${gift.repeatCount} -> ${hits[0]?.punishmentId ?? 'ничего'} x${hits.length}${hits[0]?.armenian ? ' (армянин!)' : ''}`);
   for (const hit of hits) broadcast({ type: 'hit', hit });
   return hits;
 }

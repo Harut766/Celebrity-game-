@@ -43,5 +43,11 @@ test('нормализация события TikTok', () => {
     giftDetails: { giftName: 'Rose', diamondCount: 1, giftType: 1 },
     repeatCount: 2,
   });
-  assert.deepEqual(g, { user: 'Jackie', giftName: 'Rose', coins: 1, repeatCount: 2 });
+  assert.deepEqual(g, { user: 'Jackie', login: 'jackie', giftName: 'Rose', coins: 1, repeatCount: 2 });
+});
+
+test('армянская фамилия в нике распознаётся', async () => {
+  const { looksArmenian } = await import('../src/punish.js');
+  for (const n of ['Petrosyan', 'aram_hakobyan_77', 'Арамян', 'Melikian', 'Պետրոսյան']) assert.equal(looksArmenian(config, n), true, n);
+  for (const n of ['Jackie', 'ivanov', 'Тест']) assert.equal(looksArmenian(config, n), false, n);
 });

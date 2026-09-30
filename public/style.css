@@ -130,6 +130,7 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 #testButtons button:hover { background: #4a4a58; }
 #testRepeat { width: 56px; margin-left: 4px; }
+#testPanel label { margin-right: 8px; }
 
 /* Мимика внутри SVG */
 #head { transform-box: fill-box; transform-origin: 50% 95%; }

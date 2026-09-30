@@ -37,6 +37,7 @@ export function giftToHits(config, gift) {
   return Array.from({ length: count }, (_, i) => ({
     punishmentId: punishment.id,
     user: gift.user || 'Аноним',
+    login: gift.login || '',
     giftName: gift.giftName || '',
     coins: gift.coins,
     index: i + 1,
@@ -58,8 +59,21 @@ export function isFinalGiftEvent(data) {
 export function normalizeTikTokGift(data) {
   return {
     user: data.user?.nickname || data.user?.uniqueId || 'Аноним',
+    login: data.user?.uniqueId || '',
     giftName: data.giftDetails?.giftName || data.extendedGiftInfo?.name || '',
     coins: data.giftDetails?.diamondCount ?? data.extendedGiftInfo?.diamond_count ?? 0,
     repeatCount: data.repeatCount || 1,
   };
+}
+
+/**
+ * Похож ли ник на армянскую фамилию (…yan, …ian, …ян, …յան). Цифры и символы в конце ника игнорируются.
+ * Шаблон можно поменять в config.json -> armenian.pattern.
+ */
+export function looksArmenian(config, ...names) {
+  const pattern = new RegExp(config.armenian?.pattern || '(yan|ian|ян|յան)$', 'iu');
+  return names.some(n => {
+    const clean = String(n || '').replace(/[^\p{L}]+$/u, '');
+    return clean.split(/[^\p{L}]+/u).some(part => pattern.test(part));
+  });
 }

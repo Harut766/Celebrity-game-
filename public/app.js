@@ -211,8 +211,16 @@ function headMove(frames, duration, easing = 'ease-in-out') {
 async function react(p, exprName, { quiet = false, hold = 900 } = {}) {
   setFace(exprName);
   if (quiet) await sleep(hold);
-  else await say(p);
+  else await say(armenianTwist(p));
   setFace('neutral');
+}
+
+// Если кинул зритель с армянской фамилией — с шансом говорит особую обиженную фразу
+let currentHit = null;
+function armenianTwist(p) {
+  const a = config.armenian;
+  if (!currentHit?.armenian || !a?.phrases?.length || Math.random() > (a.chance ?? .7)) return p;
+  return { ...p, phrases: a.phrases };
 }
 
 // ---------- голос ----------
@@ -651,11 +659,13 @@ async function playNext() {
   const p = byId[hit.punishmentId];
   if (p) {
     showBanner(hit, p);
+    currentHit = hit;
     hitToken++;
     lookAt(0, 0);
     highlight(p.id);
     try { await playEffect(p); } catch (e) { console.error(e); }
     await sleep(250);
+    currentHit = null;
   }
   playNext();
 }
@@ -714,7 +724,7 @@ $('testButtons').addEventListener('click', e => {
   fetch('/api/test', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ coins: Number(btn.dataset.coins), user: 'Тест', repeatCount: Number($('testRepeat').value) || 1 }),
+    body: JSON.stringify({ coins: Number(btn.dataset.coins), user: $('testUser').value || 'Тест', repeatCount: Number($('testRepeat').value) || 1 }),
   });
 });
 

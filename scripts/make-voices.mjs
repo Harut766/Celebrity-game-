@@ -99,6 +99,7 @@ function phraseLists() {
     lists.push(['idle', config.idle.phrases || []]);
     for (const [mood, phrases] of Object.entries(config.idle.moods || {})) lists.push([`mood-${mood}`, phrases]);
   }
+  if (config.armenian?.phrases) lists.push(['armenian', config.armenian.phrases]);
   return lists;
 }
 
