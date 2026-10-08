@@ -51,17 +51,20 @@ export function giftToHits(config, gift) {
  * иначе одна серия из 3 роз дала бы 1+2+3 = 6 яиц.
  */
 export function isFinalGiftEvent(data) {
-  const giftType = data.giftDetails?.giftType;
+  const giftType = data.gift?.type ?? data.giftDetails?.giftType;
   return !(giftType === 1 && !data.repeatEnd);
 }
 
-/** Нормализует сырое событие из tiktok-live-connector. */
+/**
+ * Нормализует сырое событие из tiktok-live-connector.
+ * Версия 2.x кладёт подарок в `gift` (name, diamondCount), старые версии — в `giftDetails`.
+ */
 export function normalizeTikTokGift(data) {
   return {
     user: data.user?.nickname || data.user?.uniqueId || 'Аноним',
     login: data.user?.uniqueId || '',
-    giftName: data.giftDetails?.giftName || data.extendedGiftInfo?.name || '',
-    coins: data.giftDetails?.diamondCount ?? data.extendedGiftInfo?.diamond_count ?? 0,
+    giftName: data.gift?.name || data.giftDetails?.giftName || data.extendedGiftInfo?.name || '',
+    coins: data.gift?.diamondCount || data.giftDetails?.diamondCount || data.extendedGiftInfo?.diamond_count || 0,
     repeatCount: data.repeatCount || 1,
   };
 }

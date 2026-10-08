@@ -35,6 +35,8 @@ test('промежуточные события серии не засчитыв
   assert.equal(isFinalGiftEvent({ giftDetails: { giftType: 1 }, repeatEnd: false }), false);
   assert.equal(isFinalGiftEvent({ giftDetails: { giftType: 1 }, repeatEnd: true }), true);
   assert.equal(isFinalGiftEvent({ giftDetails: { giftType: 2 }, repeatEnd: false }), true);
+  assert.equal(isFinalGiftEvent({ gift: { type: 1 }, repeatEnd: 0 }), false);
+  assert.equal(isFinalGiftEvent({ gift: { type: 1 }, repeatEnd: 1 }), true);
 });
 
 test('нормализация события TikTok', () => {
@@ -44,6 +46,15 @@ test('нормализация события TikTok', () => {
     repeatCount: 2,
   });
   assert.deepEqual(g, { user: 'Jackie', login: 'jackie', giftName: 'Rose', coins: 1, repeatCount: 2 });
+});
+
+test('нормализация события tiktok-live-connector 2.x (поле gift)', () => {
+  const g = normalizeTikTokGift({
+    user: { uniqueId: 'abrahamyan', nickname: 'Abrahamyan' },
+    gift: { name: 'Rose', diamondCount: 1, type: 1 },
+    repeatCount: 1,
+  });
+  assert.deepEqual(g, { user: 'Abrahamyan', login: 'abrahamyan', giftName: 'Rose', coins: 1, repeatCount: 1 });
 });
 
 test('армянская фамилия в нике распознаётся', async () => {
