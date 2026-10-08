@@ -30,6 +30,19 @@ app.post('/api/test', (req, res) => {
   res.json({ hits: hits.length });
 });
 
+// Иконки подарков TikTok (имя -> картинка и цена) для таблички цен. Пусто, пока не подключились к эфиру.
+let giftIcons = {};
+app.get('/api/gifts', (_req, res) => res.json(giftIcons));
+
+function extractGiftIcons(list) {
+  const icons = {};
+  for (const g of Array.isArray(list) ? list : []) {
+    const url = g?.image?.url_list?.[0] || g?.image?.urlList?.[0] || g?.icon?.url_list?.[0];
+    if (g?.name && url) icons[g.name.toLowerCase()] = { name: g.name, url, coins: g.diamond_count ?? g.diamondCount ?? 0 };
+  }
+  return icons;
+}
+
 const server = createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 let status = { connected: false, username, message: username ? 'Подключение…' : 'Режим теста (ник TikTok не указан)' };
@@ -82,7 +95,16 @@ function connectTikTok() {
   });
 
   connection.connect()
-    .then(state => setStatus({ connected: true, message: `Подключено к эфиру @${username} (room ${state.roomId})` }))
+    .then(state => {
+      setStatus({ connected: true, message: `Подключено к эфиру @${username} (room ${state.roomId})` });
+      connection.fetchAvailableGifts()
+        .then(list => {
+          giftIcons = extractGiftIcons(list);
+          console.log(`[gifts] загружено иконок подарков: ${Object.keys(giftIcons).length}`);
+          broadcast({ type: 'gifts', gifts: giftIcons });
+        })
+        .catch(err => console.log(`[gifts] не удалось получить иконки подарков: ${err.message}`));
+    })
     .catch(err => {
       setStatus({ connected: false, message: `Не удалось подключиться к @${username}: ${err.message}. Повтор через 30 с` });
       scheduleRetry();

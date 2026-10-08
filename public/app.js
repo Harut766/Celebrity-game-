@@ -687,6 +687,34 @@ function highlight(id) {
   });
 }
 
+// ---------- табличка цен: иконка подарка → наказание (как в примере) ----------
+let giftIcons = {};
+
+function giftIconFor(p) {
+  const byName = (p.gifts || []).map(n => giftIcons[n.toLowerCase()]).find(Boolean);
+  if (byName) return byName;
+  return Object.values(giftIcons).find(g => g.coins === p.price) || null;
+}
+
+function renderLegend() {
+  const list = [...config.punishments].sort((a, b) => a.price - b.price);
+  const lang = config.legend?.lang || 'both';
+  $('legendList').innerHTML = list.map(p => {
+    const g = giftIconFor(p);
+    const icon = g ? `<img src="${esc(g.url)}" alt="">` : esc(p.giftEmoji || p.emoji);
+    const main = lang === 'arm' ? (p.titleArm || p.title) : p.title;
+    const sub = lang === 'both' ? p.titleArm || '' : '';
+    return `
+    <li data-id="${esc(p.id)}">
+      <span class="gift">${icon}</span>
+      <span class="arrow">→</span>
+      <span class="em">${p.emoji}</span>
+      <span class="ttl">${esc(main)}${sub ? `<small>${esc(sub)}</small>` : ''}</span>
+      ${config.legend?.showPrice === false ? '' : `<span class="price">${p.price}🪙</span>`}
+    </li>`;
+  }).join('');
+}
+
 // ---------- инициализация ----------
 function renderScene() {
   const c = config.character;
@@ -703,13 +731,8 @@ function renderScene() {
   face.style.left = c.faceX + '%';
   face.style.top = c.faceY + '%';
 
+  renderLegend();
   const list = [...config.punishments].sort((a, b) => a.price - b.price);
-  $('legendList').innerHTML = list.map(p => `
-    <li data-id="${esc(p.id)}">
-      <span class="em">${p.emoji}</span>
-      <span class="ttl">${esc(p.title)}<small>${esc(p.titleArm || '')}</small></span>
-      <span class="price">${p.price} 🪙</span>
-    </li>`).join('');
 
   if (isTest) {
     $('testPanel').hidden = false;
@@ -733,6 +756,7 @@ function connectWs() {
   ws.onmessage = e => {
     const msg = JSON.parse(e.data);
     if (msg.type === 'hit') enqueue(msg.hit);
+    if (msg.type === 'gifts') { giftIcons = msg.gifts || {}; renderLegend(); }
     if (msg.type === 'status') {
       $('status').textContent = msg.status.message;
       $('status').className = msg.status.connected ? 'ok' : '';
@@ -743,6 +767,7 @@ function connectWs() {
 
 (async function init() {
   config = await (await fetch('/api/config')).json();
+  try { giftIcons = await (await fetch('/api/gifts')).json(); } catch {}
   byId = Object.fromEntries(config.punishments.map(p => [p.id, p]));
   resize();
   renderScene();

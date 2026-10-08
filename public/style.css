@@ -69,20 +69,23 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 #legendList { list-style: none; margin: 0; padding: 0; }
 #legendList li {
-  display: flex; align-items: center; gap: calc(var(--u) * .8);
+  display: flex; align-items: center; gap: calc(var(--u) * .7);
   font-size: calc(var(--u) * 2.1);
   font-weight: 700; line-height: 1.1;
-  padding: calc(var(--u) * .25) 0;
+  padding: calc(var(--u) * .3) 0;
   text-shadow: 0 1px 2px rgba(0,0,0,.6);
 }
-#legendList .em { font-size: calc(var(--u) * 2.8); width: calc(var(--u) * 3.6); text-align: center; }
+#legendList .gift { width: calc(var(--u) * 4); height: calc(var(--u) * 4); display: grid; place-items: center; font-size: calc(var(--u) * 3); flex: none; }
+#legendList .gift img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+#legendList .arrow { color: #ffd75a; font-weight: 900; }
+#legendList .em { font-size: calc(var(--u) * 2.4); width: auto; }
 #legendList .ttl { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#legendList .ttl small { display: block; font-weight: 500; opacity: .8; font-size: calc(var(--u) * 1.5); }
+#legendList .ttl small { display: block; font-weight: 500; opacity: .85; font-size: calc(var(--u) * 1.5); }
 #legendList .price {
-  background: #ffd75a; color: #5a1a00;
+  background: rgba(255, 215, 90, .92); color: #5a1a00;
   border-radius: 999px;
-  padding: calc(var(--u) * .2) calc(var(--u) * 1);
-  font-size: calc(var(--u) * 1.9);
+  padding: calc(var(--u) * .15) calc(var(--u) * .8);
+  font-size: calc(var(--u) * 1.6);
   white-space: nowrap;
 }
 #legendList li.active { animation: pulse .6s ease-in-out 2; }

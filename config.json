@@ -186,6 +186,10 @@
       }
     ]
   },
+  "legend": {
+    "lang": "both",
+    "showPrice": true
+  },
   "punishments": [
     {
       "id": "egg",
@@ -193,7 +197,7 @@
       "emoji": "🥚",
       "title": "Яйцо в лоб",
       "titleArm": "Ձվով հարված դեմքին",
-      "exampleGift": "🌹 Роза",
+      "giftEmoji": "🌹",
       "gifts": [
         "Rose"
       ],
@@ -219,8 +223,10 @@
       "emoji": "🍅",
       "title": "Помидор в лицо",
       "titleArm": "Լոլիկով հարված դեմքին",
-      "exampleGift": "🫰 Finger Heart",
-      "gifts": [],
+      "giftEmoji": "🫰",
+      "gifts": [
+        "Finger Heart"
+      ],
       "video": "",
       "phrases": [
         {
@@ -243,7 +249,7 @@
       "emoji": "🍉",
       "title": "Арбуз в лицо",
       "titleArm": "Ձմերուկի հարված դեմքին",
-      "exampleGift": "🍩 Пончик",
+      "giftEmoji": "🍩",
       "gifts": [
         "Doughnut",
         "Donut"
@@ -266,12 +272,14 @@
     },
     {
       "id": "brick",
-      "price": 99,
+      "price": 100,
       "emoji": "🧱",
       "title": "Кирпич по голове",
       "titleArm": "Կիրպիչով հարված դեմքին",
-      "exampleGift": "💐 от 99 монет",
-      "gifts": [],
+      "giftEmoji": "🫶",
+      "gifts": [
+        "Hand Hearts"
+      ],
       "video": "",
       "phrases": [
         {
@@ -294,8 +302,10 @@
       "emoji": "💩",
       "title": "Ведро говна на голову",
       "titleArm": "Քաքը թափվում ա գլխին",
-      "exampleGift": "🎁 от 299 монет",
-      "gifts": [],
+      "giftEmoji": "🐶",
+      "gifts": [
+        "Corgi"
+      ],
       "video": "",
       "phrases": [
         {
@@ -318,8 +328,10 @@
       "emoji": "🔥",
       "title": "ПОЛНОЕ НАКАЗАНИЕ",
       "titleArm": "Բեսամը պատիժ !!!",
-      "exampleGift": "🦁 от 1000 монет",
-      "gifts": [],
+      "giftEmoji": "🌌",
+      "gifts": [
+        "Galaxy"
+      ],
       "video": "",
       "combo": [
         "egg",
