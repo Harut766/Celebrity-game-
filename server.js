@@ -25,6 +25,8 @@ app.get('/api/config', (_req, res) => {
 
 // Тестовый подарок без эфира: POST /api/test {"coins": 30, "user": "Тест", "repeatCount": 2}
 app.post('/api/test', (req, res) => {
+  // Только с этого компьютера: через туннель (cloudflared и т.п.) тестовые удары запрещены
+  if (req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']) return res.status(403).json({ error: 'test only from localhost' });
   const { coins = 1, giftName = '', user = 'Тест', repeatCount = 1 } = req.body || {};
   const hits = handleGift({ coins: Number(coins), giftName, user, login: user, repeatCount: Number(repeatCount) });
   res.json({ hits: hits.length });
