@@ -34,6 +34,7 @@ app.post('/api/test', (req, res) => {
 
 // Иконки подарков TikTok (имя -> картинка и цена) для таблички цен. Пусто, пока не подключились к эфиру.
 let giftIcons = {};
+let giftIconsUnavailable = false;
 app.get('/api/gifts', (_req, res) => res.json(giftIcons));
 
 function extractGiftIcons(list) {
@@ -99,13 +100,20 @@ function connectTikTok() {
   connection.connect()
     .then(state => {
       setStatus({ connected: true, message: `Подключено к эфиру @${username} (room ${state.roomId})` });
+      if (giftIconsUnavailable) return;
       connection.fetchAvailableGifts()
         .then(list => {
           giftIcons = extractGiftIcons(list);
           console.log(`[gifts] загружено иконок подарков: ${Object.keys(giftIcons).length}`);
           broadcast({ type: 'gifts', gifts: giftIcons });
         })
-        .catch(err => console.log(`[gifts] не удалось получить иконки подарков: ${err.message}`));
+        .catch(err => {
+          // Без платного ключа Euler Stream картинки подарков недоступны — табличка показывает эмодзи
+          giftIconsUnavailable = true;
+          console.log(/Business plan|plan/i.test(err.message)
+            ? '[gifts] картинки подарков недоступны без платного ключа — в табличке будут эмодзи (это нормально)'
+            : `[gifts] не удалось получить картинки подарков: ${err.message}`);
+        });
     })
     .catch(err => {
       setStatus({ connected: false, message: `Не удалось подключиться к @${username}: ${err.message}. Повтор через 30 с` });
