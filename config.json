@@ -199,7 +199,8 @@
       "titleArm": "Ձվով հարված դեմքին",
       "giftEmoji": "🌹",
       "gifts": [
-        "Rose"
+        "Rose",
+        "TikTok"
       ],
       "video": "",
       "phrases": [
@@ -225,7 +226,9 @@
       "titleArm": "Լոլիկով հարված դեմքին",
       "giftEmoji": "🫰",
       "gifts": [
-        "Finger Heart"
+        "Finger Heart",
+        "Friendship Necklace",
+        "Perfume"
       ],
       "video": "",
       "phrases": [
@@ -251,8 +254,7 @@
       "titleArm": "Ձմերուկի հարված դեմքին",
       "giftEmoji": "🍩",
       "gifts": [
-        "Doughnut",
-        "Donut"
+        "Doughnut"
       ],
       "video": "",
       "phrases": [
@@ -272,13 +274,15 @@
     },
     {
       "id": "brick",
-      "price": 100,
+      "price": 99,
       "emoji": "🧱",
       "title": "Кирпич по голове",
       "titleArm": "Կիրպիչով հարված դեմքին",
-      "giftEmoji": "🫶",
+      "giftEmoji": "🤠",
       "gifts": [
-        "Hand Hearts"
+        "Hat and Mustache",
+        "Hand Heart",
+        "Hearts"
       ],
       "video": "",
       "phrases": [
