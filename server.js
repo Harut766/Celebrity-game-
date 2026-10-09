@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { WebSocketServer } from 'ws';
 import { TikTokLiveConnection, WebcastEvent, ControlEvent } from 'tiktok-live-connector';
-import { giftToHits, isFinalGiftEvent, normalizeTikTokGift, looksArmenian } from './src/punish.js';
+import { giftToHits, normalizeTikTokGift, looksArmenian, createStreakTracker } from './src/punish.js';
 
 const CONFIG_PATH = new URL('./config.json', import.meta.url);
 const loadConfig = () => JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
@@ -70,7 +70,7 @@ function handleGift(gift) {
   const hits = giftToHits(config, gift);
   const armenian = config.armenian?.enabled !== false && looksArmenian(config, gift.user, gift.login);
   for (const hit of hits) hit.armenian = armenian;
-  console.log(`[gift] ${gift.user}: ${gift.giftName || '?'} (${gift.coins} мон.) x${gift.repeatCount} -> ${hits[0]?.punishmentId ?? 'ничего'} x${hits.length}${hits[0]?.armenian ? ' (армянин!)' : ''}`);
+  console.log(`[gift] ${gift.user}: ${gift.giftName || '?'}${gift.giftId ? ` (id ${gift.giftId})` : ''} (${gift.coins} мон.) x${gift.repeatCount} -> ${hits[0]?.punishmentId ?? 'ничего'} x${hits.length}${hits[0]?.armenian ? ' (армянин!)' : ''}`);
   for (const hit of hits) broadcast({ type: 'hit', hit });
   return hits;
 }
@@ -81,9 +81,11 @@ function connectTikTok() {
     processInitialData: false,
   });
 
+  const newGifts = createStreakTracker();
   connection.on(WebcastEvent.GIFT, data => {
-    if (!isFinalGiftEvent(data)) return;
-    handleGift(normalizeTikTokGift(data));
+    const count = newGifts(data);
+    if (!count) return;
+    handleGift({ ...normalizeTikTokGift(data), repeatCount: count });
   });
 
   let retry = null;
