@@ -14,10 +14,10 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { platform } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { phraseLists as listPhrases, voiceFileName, WEB_DIR } from '../src/voices.js';
 
 const CONFIG_PATH = new URL('../config.json', import.meta.url);
 const OUT_DIR = new URL('../public/media/voice/auto/', import.meta.url);
-const WEB_DIR = 'media/voice/auto/';
 
 const args = Object.fromEntries(
   process.argv.slice(2).join(' ').split(/\s*--/).filter(Boolean).map(a => {
@@ -91,18 +91,6 @@ if (args.list) {
 }
 
 
-// Все места в конфиге, где есть фразы: [ключ для имени файла, массив фраз]
-function phraseLists() {
-  const lists = [];
-  for (const p of config.punishments || []) lists.push([p.id, p.phrases || []]);
-  if (config.idle) {
-    lists.push(['idle', config.idle.phrases || []]);
-    for (const [mood, phrases] of Object.entries(config.idle.moods || {})) lists.push([`mood-${mood}`, phrases]);
-  }
-  if (config.armenian?.phrases) lists.push(['armenian', config.armenian.phrases]);
-  return lists;
-}
-
 async function makeEdgeTts() {
   const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -170,21 +158,24 @@ if (!dry) {
 if (!dry) mkdirSync(OUT_DIR, { recursive: true });
 
 let made = 0, skipped = 0, failed = 0;
-for (const [key, phrases] of phraseLists()) {
+const MANIFEST = new URL('manifest.json', OUT_DIR);
+let manifest = {};
+try { manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')); } catch {}
+
+for (const [key, phrases] of listPhrases(config)) {
   for (let i = 0; i < phrases.length; i++) {
     const ph = phrases[i];
     if (!ph.text) continue;
     // Файлы, которые пользователь положил сам (не из auto/), не трогаем
     if (ph.file && !ph.file.startsWith(WEB_DIR)) { skipped++; continue; }
-    const hash = createHash('md5').update(`${engine}|${voice}|${pitch}|${rate}|${ph.text}`).digest('hex').slice(0, 6);
-    const name = `${key}-${i + 1}-${hash}.${ext}`;
+    const name = voiceFileName(key, i, ph.text, { engine, voice, pitch, rate });
     const disk = new URL(name, OUT_DIR);
-    // Файл с таким текстом и голосом уже есть на диске — просто подставляем его
-    if (existsSync(disk)) { ph.file = WEB_DIR + name; skipped++; continue; }
+    // Файл с таким текстом и голосом уже есть на диске — просто запоминаем его
+    if (existsSync(disk)) { manifest[ph.text] = WEB_DIR + name; skipped++; continue; }
     if (dry) { console.log(`[dry] ${name}  «${ph.text}»`); continue; }
     try {
       await synth(ph.text, fileURLToPath(disk));
-      ph.file = WEB_DIR + name;
+      manifest[ph.text] = WEB_DIR + name;
       made++;
       console.log(`✓ ${name}  «${ph.text}»`);
     } catch (e) {
@@ -194,7 +185,8 @@ for (const [key, phrases] of phraseLists()) {
   }
 }
 
-if (!dry) writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2) + '\n');
+// Пути пишем в manifest.json, а не в config.json — обновления игры их не сотрут
+if (!dry) writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
 console.log(`\nГотово: озвучено ${made}, пропущено ${skipped}, ошибок ${failed}.`);
 if (failed && engine === 'edge') console.log('Если нет интернета или сервис Microsoft недоступен, попробуйте: npm run voices -- --engine mac');
 process.exit(failed ? 1 : 0);

@@ -4,9 +4,12 @@ import { readFileSync } from 'node:fs';
 import { WebSocketServer } from 'ws';
 import { TikTokLiveConnection, WebcastEvent, ControlEvent } from 'tiktok-live-connector';
 import { giftToHits, normalizeTikTokGift, looksArmenian, createStreakTracker } from './src/punish.js';
+import { attachVoiceFiles } from './src/voices.js';
+import { fileURLToPath } from 'node:url';
 
 const CONFIG_PATH = new URL('./config.json', import.meta.url);
-const loadConfig = () => JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
+const PUBLIC_DIR = fileURLToPath(new URL('./public', import.meta.url));
+const loadConfig = () => attachVoiceFiles(JSON.parse(readFileSync(CONFIG_PATH, 'utf8')), PUBLIC_DIR);
 
 let config = loadConfig();
 const username = process.argv[2] || process.env.TIKTOK_USERNAME || config.tiktokUsername;
@@ -15,7 +18,7 @@ const RECONNECT_MS = 30_000;
 
 const app = express();
 app.use(express.json());
-app.use(express.static(new URL('./public', import.meta.url).pathname));
+app.use(express.static(PUBLIC_DIR));
 
 // Конфиг перечитывается на каждый запрос: цены можно менять без перезапуска.
 app.get('/api/config', (_req, res) => {
