@@ -19,7 +19,7 @@
   "homepage": "https://github.com/Harut766/Celebrity-game-#readme",
   "dependencies": {
     "express": "^5.2.1",
-    "msedge-tts": "^2.0.8",
+    "msedge-tts": "^2.0.9",
     "tiktok-live-connector": "^2.5.0",
     "ws": "^8.22.0"
   },

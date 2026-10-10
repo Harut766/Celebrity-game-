@@ -145,15 +145,17 @@ function makeMacSay() {
 }
 
 const ext = engine === 'mac' ? 'm4a' : 'mp3';
-let synth = null;
-if (!dry) {
+// Подключаемся к сервису озвучки только если действительно есть неозвученные фразы
+let synth = null, synthError = null;
+async function getSynth() {
+  if (synth || synthError) return synth;
   try {
     synth = engine === 'mac' ? makeMacSay() : await makeEdgeTts();
   } catch (e) {
+    synthError = e;
     console.error(`Не удалось запустить озвучку (${engine}): ${e.message}`);
-    if (engine === 'edge') console.error('Проверьте интернет или используйте голос macOS: npm run voices -- --engine mac');
-    process.exit(1);
   }
+  return synth;
 }
 if (!dry) mkdirSync(OUT_DIR, { recursive: true });
 
@@ -174,7 +176,9 @@ for (const [key, phrases] of listPhrases(config)) {
     if (existsSync(disk)) { manifest[ph.text] = WEB_DIR + name; skipped++; continue; }
     if (dry) { console.log(`[dry] ${name}  «${ph.text}»`); continue; }
     try {
-      await synth(ph.text, fileURLToPath(disk));
+      const run = await getSynth();
+      if (!run) { failed++; continue; }
+      await run(ph.text, fileURLToPath(disk));
       manifest[ph.text] = WEB_DIR + name;
       made++;
       console.log(`✓ ${name}  «${ph.text}»`);
@@ -188,5 +192,5 @@ for (const [key, phrases] of listPhrases(config)) {
 // Пути пишем в manifest.json, а не в config.json — обновления игры их не сотрут
 if (!dry) writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
 console.log(`\nГотово: озвучено ${made}, пропущено ${skipped}, ошибок ${failed}.`);
-if (failed && engine === 'edge') console.log('Если нет интернета или сервис Microsoft недоступен, попробуйте: npm run voices -- --engine mac');
+if (failed && engine === 'edge') console.log('Сервис Microsoft сейчас недоступен — уже озвученные фразы работают. Попробуйте позже или: npm run voices -- --engine mac');
 process.exit(failed ? 1 : 0);
