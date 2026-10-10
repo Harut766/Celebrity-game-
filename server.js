@@ -66,7 +66,16 @@ function setStatus(patch) {
   console.log(`[status] ${status.message}`);
 }
 
-wss.on('connection', ws => ws.send(JSON.stringify({ type: 'status', status })));
+wss.on('connection', ws => {
+  ws.send(JSON.stringify({ type: 'status', status }));
+  // Оверлей сообщает о проблемах со звуком — показываем их здесь
+  ws.on('message', raw => {
+    try {
+      const msg = JSON.parse(raw);
+      if (msg.type === 'log' && typeof msg.text === 'string') console.log(`[оверлей] ${msg.text.slice(0, 300)}`);
+    } catch {}
+  });
+});
 
 function handleGift(gift) {
   config = loadConfig();

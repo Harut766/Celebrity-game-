@@ -226,10 +226,39 @@ function armenianTwist(p) {
 // ---------- голос ----------
 // Реплика: свой аудиофайл (phrases[].file) или встроенная озвучка браузера по тексту.
 let speech = null;
+// Проигрывание mp3 через Web Audio — тем же путём, что и звуки ударов/газеты
+// (в браузере LIVE Studio <audio> бывает заблокирован, а Web Audio работает).
+const clipCache = new Map();
+async function playClip(url, volume = 1) {
+  const a = ac();
+  if (!a) throw new Error('нет Web Audio');
+  if (!clipCache.has(url)) {
+    clipCache.set(url, fetch(url).then(r => {
+      if (!r.ok) throw new Error(`файл не найден (${r.status})`);
+      return r.arrayBuffer();
+    }).then(b => a.decodeAudioData(b)).catch(e => { clipCache.delete(url); throw e; }));
+  }
+  const buffer = await clipCache.get(url);
+  const src = a.createBufferSource();
+  const g = a.createGain(); g.gain.value = volume;
+  src.buffer = buffer;
+  src.connect(g).connect(a.destination);
+  return { src, done: new Promise(res => { src.onended = res; src.start(); }) };
+}
+
+// Сообщения об ошибках звука — в Терминал игры (каждое один раз)
+const reported = new Set();
+function report(text) {
+  if (reported.has(text)) return;
+  reported.add(text);
+  try { ws?.readyState === 1 && ws.send(JSON.stringify({ type: 'log', text })); } catch {}
+}
+
 function stopSpeech() {
   if (!speech) return;
   clearInterval(speech.lips); clearTimeout(speech.timer);
   speech.audio?.pause();
+  try { speech.clip?.stop(); } catch {}
   if (speech.tts) window.speechSynthesis?.cancel();
   speech.bubble.remove();
   talkOpen = false; renderFace();
@@ -275,12 +304,22 @@ function say(p) {
     speech.timer = setTimeout(finish, 9000);
 
     if (line.file) {
-      const audio = new Audio(line.file);
-      audio.volume = v.volume ?? 1;
-      speech.audio = audio;
-      audio.onended = audio.onerror = finish;
-      audio.play().catch(finish);
+      const mine = speech;
+      playClip(line.file, v.volume ?? 1)
+        .then(({ src, done }) => { if (speech === mine) mine.clip = src; else src.stop(); return done; })
+        .then(finish)
+        .catch(err => {
+          report(`голос: не удалось через Web Audio ${line.file}: ${err.message}`);
+          // запасной путь — обычный <audio>
+          const audio = new Audio(line.file);
+          audio.volume = v.volume ?? 1;
+          mine.audio = audio;
+          audio.onended = finish;
+          audio.onerror = () => { report(`голос: файл не загружается ${line.file}`); finish(); };
+          audio.play().catch(e => { report(`голос: браузер запретил звук (${e.name})`); finish(); });
+        });
     } else if (v.tts !== false && window.speechSynthesis && line.text) {
+      report(`голос: для фразы «${line.text}» нет mp3 — запустите npm run voices`);
       const u = new SpeechSynthesisUtterance(line.text);
       u.lang = 'ru-RU';
       const voice = pickRuVoice();
@@ -751,8 +790,9 @@ $('testButtons').addEventListener('click', e => {
   });
 });
 
+let ws = null;
 function connectWs() {
-  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
   ws.onmessage = e => {
     const msg = JSON.parse(e.data);
     if (msg.type === 'hit') enqueue(msg.hit);
@@ -762,7 +802,19 @@ function connectWs() {
       $('status').className = msg.status.connected ? 'ok' : '';
     }
   };
+  ws.onopen = () => refreshConfig();
   ws.onclose = () => { $('status').textContent = 'Нет связи с сервером, переподключение…'; setTimeout(connectWs, 2000); };
+}
+
+// Подтягиваем свежие настройки (фразы, пути к озвучке, цены) без перезагрузки страницы
+async function refreshConfig() {
+  try {
+    const fresh = await (await fetch('/api/config')).json();
+    if (!fresh?.punishments) return;
+    config = fresh;
+    byId = Object.fromEntries(config.punishments.map(p => [p.id, p]));
+    renderLegend();
+  } catch {}
 }
 
 (async function init() {
@@ -773,4 +825,5 @@ function connectWs() {
   renderScene();
   startIdle();
   connectWs();
+  setInterval(refreshConfig, 60000);
 })();
