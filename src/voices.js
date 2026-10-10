@@ -16,6 +16,7 @@ export function phraseLists(config) {
     for (const [mood, phrases] of Object.entries(config.idle.moods || {})) lists.push([`mood-${mood}`, phrases]);
   }
   if (config.armenian?.phrases) lists.push(['armenian', config.armenian.phrases]);
+  if (config.combo?.phrases) lists.push(['combo', config.combo.phrases]);
   return lists;
 }
 

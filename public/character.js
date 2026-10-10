@@ -109,6 +109,19 @@ function sceneSvg(signText, headSvg, skin) {
     <path d="M694 626 L694 700 Q712 708 730 700 L734 630Z" fill="#f4f1e8" stroke="#d6cfbe" stroke-width="2"/>
   </g>
 
+  <!-- флажок, лучи от лампы, тень на полу, табуретка -->
+  <g>
+    <line x1="322" y1="500" x2="322" y2="600" stroke="#5a3a1f" stroke-width="4"/>
+    <path d="M324 504 L420 512 L414 552 L324 560Z" fill="#e30a17"/>
+    <circle cx="362" cy="532" r="15" fill="#fff"/><circle cx="367" cy="532" r="12" fill="#e30a17"/>
+    <path d="M384 532 l-9 3 l5 -7 l0 9 l-5 -7Z" fill="#fff"/>
+    <path d="M540 545 L330 1300 L750 1300Z" fill="#ffe7a0" opacity=".05"/>
+    <ellipse cx="540" cy="1600" rx="230" ry="26" fill="#000" opacity=".35"/>
+    <rect x="696" y="1478" width="80" height="14" rx="4" fill="#8a5d35"/>
+    <path d="M704 1492 L700 1610 M768 1492 L772 1610 M712 1560 H760" stroke="#5a3a1f" stroke-width="8" stroke-linecap="round"/>
+    <ellipse cx="736" cy="1476" rx="30" ry="6" fill="#d9c7a1"/>
+  </g>
+
   <!-- унитаз -->
   <path d="M428 1296 C428 1400 440 1470 486 1500 H594 C640 1470 652 1400 652 1296Z" fill="url(#porcelain)" stroke="#9aa4ad" stroke-width="4"/>
   <path d="M466 1496 H614 L622 1556 H458Z" fill="url(#porcelain)" stroke="#9aa4ad" stroke-width="4"/>
@@ -217,6 +230,26 @@ function sceneSvg(signText, headSvg, skin) {
   </g>
 
 ${headSvg}
+  </g>
+
+  <!-- стаканчик турецкого чая (тюльпан) на табуретке: в покое он из него пьёт -->
+  <g id="teaGlass">
+    <path d="M722 1418 Q716 1440 726 1452 Q720 1462 724 1472 H748 Q752 1462 746 1452 Q756 1440 750 1418Z" fill="#b5401f" opacity=".92"/>
+    <path d="M722 1418 Q716 1440 726 1452 Q720 1462 724 1472 H748 Q752 1462 746 1452 Q756 1440 750 1418Z" fill="none" stroke="#fff" stroke-width="2.5" opacity=".8"/>
+    <path d="M727 1424 Q724 1440 730 1450" stroke="#fff" stroke-width="3" opacity=".6" fill="none"/>
+    <g class="steam" stroke="#fff" stroke-width="3" fill="none" opacity=".55">
+      <path d="M730 1410 q-6 -10 0 -20 q6 -10 0 -20"/><path d="M742 1408 q6 -10 0 -20 q-6 -10 0 -20"/>
+    </g>
+  </g>
+
+  <!-- рука с поднятым пальцем: «Ван минут!» -->
+  <g id="fingerHand" style="opacity:0">
+    <path d="M700 1060 C706 1010 712 980 716 950" stroke="url(#sleeveR)" stroke-width="64" stroke-linecap="round" fill="none"/>
+    <rect x="684" y="920" width="66" height="22" rx="8" fill="url(#shirt)" transform="rotate(-8 717 931)"/>
+    <path d="M690 918 C686 890 694 872 716 870 C738 868 748 884 746 906 C744 920 734 926 718 926 C704 926 692 924 690 918Z" fill="url(#handG)"/>
+    <rect x="708" y="800" width="20" height="80" rx="10" fill="url(#handG)" stroke="${skin.line}" stroke-width="2"/>
+    <path d="M712 830 h12 M712 852 h12" stroke="${skin.line}" stroke-width="2"/>
+    <path d="M694 888 q-14 4 -12 18 q4 10 16 6" fill="url(#handG)" stroke="${skin.line}" stroke-width="2"/>
   </g>
   </g>
 </svg>`;

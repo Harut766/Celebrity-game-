@@ -156,6 +156,7 @@ const FACE_PARTS = [
 const EXPRESSIONS = {
   neutral:   { eyes: 'eyesOpen',   mouth: 'mouthIdle' },
   smirk:     { eyes: 'eyesOpen',   mouth: 'mouthSmirk',  brows: 'browsPinch' },
+  sip:       { eyes: 'eyesBlink',  mouth: 'mouthO',      brows: 'browsUp' },
   reading:   { eyes: 'eyesDown',   mouth: 'mouthIdle' },
   laugh:     { eyes: 'eyesHappy',  mouth: 'mouthLaugh',  brows: 'browsUp' },
   wink:      { eyes: 'eyesWink',   mouth: 'mouthSmirk',  brows: 'browsUp' },
@@ -217,10 +218,14 @@ async function react(p, exprName, { quiet = false, hold = 900 } = {}) {
 
 // Если кинул зритель с армянской фамилией — с шансом говорит особую обиженную фразу
 let currentHit = null;
+let combo = 0, lastHitAt = 0;
 function armenianTwist(p) {
   const a = config.armenian;
-  if (!currentHit?.armenian || !a?.phrases?.length || Math.random() > (a.chance ?? .7)) return p;
-  return { ...p, phrases: a.phrases };
+  if (currentHit?.armenian && a?.phrases?.length && Math.random() <= (a.chance ?? .7)) return { ...p, phrases: a.phrases };
+  // Подарки идут подряд — умоляет пощадить
+  const c = config.combo;
+  if (combo >= (c?.from ?? 3) && c?.phrases?.length && Math.random() < (c.chance ?? .5)) return { ...p, phrases: c.phrases };
+  return p;
 }
 
 // ---------- голос ----------
@@ -474,7 +479,157 @@ const idleActions = [
   async function legs() { await toggleLegs(); },
   // перелистывает страницу
   async function flip() { setFace('reading'); await flipPage(); await sleep(500); },
+  drinkTea,
+  oneMinute,
 ];
+
+// ---------- новые мемные действия ----------
+async function drinkTea(still) {
+  const glass = document.getElementById('teaGlass');
+  if (!glass) return;
+  lookAt(5, 3); setFace('smirk'); rustle();
+  const paper = paperMove([[0], [34], [34], [34], [34], [0]], 3800);
+  await sleep(500);
+  if (!still()) return;
+  const lift = 'translate(-190px, -615px)';
+  const anim = glass.animate([
+    { transform: 'translate(0, 0) rotate(0deg)' },
+    { transform: `${lift} rotate(-8deg)`, offset: .3 },
+    { transform: `${lift} rotate(-40deg)`, offset: .55 },
+    { transform: `${lift} rotate(-8deg)`, offset: .75 },
+    { transform: 'translate(0, 0) rotate(0deg)' },
+  ], { duration: 2800, easing: 'ease-in-out' });
+  setTimeout(() => { if (still()) { setFace('sip'); noise(.5, 1200, .12); } }, 900);
+  setTimeout(() => { if (still()) setFace('smirk'); }, 1900);
+  await anim.finished;
+  await paper;
+  if (still()) await moodLine('tea', .8);
+}
+
+async function oneMinute(still) {
+  const hand = document.getElementById('fingerHand');
+  if (!hand) return;
+  lookAt(0, 0); setFace('grumpy');
+  hand.style.opacity = '1';
+  const wag = hand.animate([
+    { transform: 'translateY(170px)', opacity: 0 },
+    { transform: 'translateY(0) rotate(0deg)', opacity: 1, offset: .2 },
+    { transform: 'rotate(-12deg)', offset: .35 }, { transform: 'rotate(12deg)', offset: .5 },
+    { transform: 'rotate(-12deg)', offset: .65 }, { transform: 'rotate(0deg)', offset: .8 },
+    { transform: 'translateY(170px)', opacity: 0 },
+  ], { duration: 3600, easing: 'ease-in-out' }).finished;
+  headMove([{}, { r: -5 }, { r: 5 }, { r: -5 }, {}], 1600);
+  await Promise.all([wag, still() ? moodLine('oneMinute', 1) : null]);
+  hand.style.opacity = '0';
+}
+
+// Зверьё во дворе (рисунки)
+const CAT_SVG = `<svg viewBox="0 0 120 80" width="100%"><g class="bob">
+  <path d="M22 52 Q10 34 6 16" stroke="#e08a2e" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <rect x="30" y="58" width="8" height="18" rx="3" fill="#e5892f"/><rect x="42" y="58" width="8" height="18" rx="3" fill="#f09a3a"/>
+  <rect x="68" y="58" width="8" height="18" rx="3" fill="#e5892f"/><rect x="80" y="58" width="8" height="18" rx="3" fill="#f09a3a"/>
+  <ellipse cx="56" cy="52" rx="34" ry="16" fill="#f09a3a"/>
+  <path d="M38 42 q4 8 0 18 M52 38 q4 10 0 22 M66 38 q4 10 0 22" stroke="#c96f1c" stroke-width="3" fill="none"/>
+  <circle cx="93" cy="38" r="16" fill="#f09a3a"/>
+  <path d="M81 28 L84 10 L93 23Z M97 23 L105 10 L108 30Z" fill="#f09a3a"/><path d="M84 25 L86 16 L90 23Z" fill="#ffb8c0"/>
+  <ellipse cx="89" cy="36" rx="2.6" ry="3.6" fill="#2a2a1a"/><ellipse cx="100" cy="36" rx="2.6" ry="3.6" fill="#2a2a1a"/>
+  <path d="M95 42 l-3 -2 h6z" fill="#ff8fa0"/>
+  <path d="M100 44 h14 M100 46 l13 4 M88 44 h-12 M88 46 l-11 4" stroke="#6b4a2c" stroke-width="1.2"/>
+</g></svg>`;
+const PIGEON_SVG = `<svg viewBox="0 0 100 60" width="100%">
+  <path d="M70 30 L96 22 L92 38Z" fill="#6f7680"/>
+  <ellipse cx="50" cy="32" rx="28" ry="15" fill="#8d95a0"/>
+  <path d="M30 26 Q38 20 46 28" stroke="#5aa39a" stroke-width="5" fill="none"/>
+  <circle cx="24" cy="24" r="11" fill="#7b838d"/><circle cx="21" cy="22" r="2.2" fill="#e85d2a"/><circle cx="21" cy="22" r="1" fill="#111"/>
+  <path d="M13 24 L5 27 L13 28Z" fill="#e8b04a"/>
+  <path class="flap" d="M40 28 Q55 0 78 8 Q66 22 56 30Z" fill="#a7aeb8"/>
+</svg>`;
+const CHICKEN_SVG = `<svg viewBox="0 0 90 90" width="100%"><g class="bob">
+  <path d="M38 70 L34 88 M52 70 L56 88" stroke="#e8a33a" stroke-width="4"/>
+  <path d="M8 40 Q2 24 16 22 Q12 34 22 40Z" fill="#e9e3d6"/>
+  <ellipse cx="44" cy="52" rx="28" ry="22" fill="#fbf8f0"/>
+  <path d="M30 50 Q44 40 56 52" stroke="#e2dccb" stroke-width="4" fill="none"/>
+  <circle cx="68" cy="30" r="12" fill="#fbf8f0"/>
+  <path d="M62 18 q2 -8 6 -2 q3 -8 6 0 q4 -6 5 3Z" fill="#e0312a"/>
+  <path d="M79 30 L88 33 L79 36Z" fill="#e8a33a"/><path d="M74 38 q2 8 -2 10 q-4 -4 -1 -10Z" fill="#e0312a"/>
+  <circle cx="71" cy="28" r="2" fill="#111"/>
+</g></svg>`;
+
+function spawnCritter(svg, widthU) {
+  const el = document.createElement('div');
+  el.className = 'critter';
+  el.innerHTML = svg;
+  el.style.width = widthU * U + 'px';
+  $('critters').appendChild(el);
+  return el;
+}
+
+async function catVisit(still) {
+  const W = stage.clientWidth, H = stage.clientHeight, y = H * .96 - 15 * U;
+  const cat = spawnCritter(CAT_SVG, 22);
+  await cat.animate([{ transform: `translate(${-18 * U}px, ${y}px)` }, { transform: `translate(${18 * U}px, ${y}px)` }],
+    { duration: 3000, fill: 'forwards' }).finished;
+  cat.querySelector('.bob')?.classList.remove('bob');
+  lookAt(-6, 4); setFace('smirk');
+  headMove([{}, { r: -6, y: .5 }, { r: -6, y: .5 }, {}], 2400);
+  if (still()) await moodLine('cat', .9);
+  cat.querySelector('g')?.classList.add('bob');
+  await cat.animate([{ transform: `translate(${18 * U}px, ${y}px)` }, { transform: `translate(${W + 18 * U}px, ${y}px)` }],
+    { duration: 4500, fill: 'forwards' }).finished;
+  cat.remove();
+}
+
+async function pigeonDrop(still) {
+  const W = stage.clientWidth, H = stage.clientHeight, y = H * .17, t = facePoint();
+  const bird = spawnCritter(PIGEON_SVG, 12);
+  setFace('lookUp'); lookAt(4, -3);
+  const fly = bird.animate([{ transform: `translate(${W + 12 * U}px, ${y}px)` }, { transform: `translate(${-16 * U}px, ${y - 6 * U}px)` }],
+    { duration: 3600, easing: 'linear' });
+  fly.finished.then(() => bird.remove());
+  await sleep(1650);
+  if (!still()) return;
+  const drop = spawn('particle', '<svg viewBox="0 0 10 12" width="100%"><path d="M5 0 Q10 7 5 12 Q0 7 5 0Z" fill="#f2f2ea"/></svg>', 0, 0, 1);
+  drop.style.width = 2 * U + 'px';
+  await drop.animate([{ transform: `translate(${t.x}px, ${y + 4 * U}px)` }, { transform: `translate(${t.x}px, ${t.y - 15 * U}px)` }],
+    { duration: 450, easing: 'ease-in' }).finished;
+  drop.remove();
+  noise(.2, 1500, .3); shake(); setFace('hurt');
+  stain(`<path d="${blobPath(40, 8, .5)}" fill="#f4f4ee"/><circle cx="52" cy="48" r="9" fill="#cfcfc6"/>`, { dy: -14, dx: rand(-2, 2), sizeU: 9, drip: 3, life: 9000 });
+  await sleep(500);
+  setFace('disgust');
+  headMove([{}, { r: -6 }, { r: 6 }, { r: -4 }, {}], 900);
+  if (still()) await moodLine('pigeon', .95);
+}
+
+function chickenLoop() {
+  setTimeout(async () => {
+    const W = stage.clientWidth, H = stage.clientHeight, y = H * .955 - 10 * U;
+    const ch = spawnCritter(CHICKEN_SVG, 10);
+    const left = Math.random() < .5;
+    if (!left) ch.style.scale = '-1 1';
+    const from = left ? -12 * U : W + 2 * U, to = left ? W + 2 * U : -12 * U;
+    await ch.animate([{ transform: `translate(${from}px, ${y}px)` }, { transform: `translate(${(from + to) / 2}px, ${y}px)`, offset: .45 },
+      { transform: `translate(${(from + to) / 2}px, ${y}px)`, offset: .6 }, { transform: `translate(${to}px, ${y}px)` }],
+      { duration: 9000, easing: 'linear' }).finished;
+    ch.remove();
+    chickenLoop();
+  }, rand(15000, 35000));
+}
+
+const ambientEvents = [catVisit, pigeonDrop];
+function ambientLoop() {
+  setTimeout(async () => {
+    if (isIdle()) {
+      idleBusy = true;
+      const tok = hitToken;
+      const still = () => tok === hitToken;
+      try { await ambientEvents[Math.floor(Math.random() * ambientEvents.length)](still); } catch {}
+      if (still()) { setFace('neutral'); lookAt(0, 0); }
+      idleBusy = false;
+    }
+    ambientLoop();
+  }, rand(25000, 50000));
+}
 
 function actionsLoop() {
   setTimeout(async () => {
@@ -509,7 +664,7 @@ function talkLoop() {
 
 function startIdle() {
   if (config.idle?.enabled === false || !document.getElementById('head')) return;
-  blinkLoop(); eyesLoop(); actionsLoop(); talkLoop();
+  blinkLoop(); eyesLoop(); actionsLoop(); talkLoop(); ambientLoop(); chickenLoop();
 }
 
 // ---------- наказания ----------
@@ -698,6 +853,10 @@ async function playNext() {
   const p = byId[hit.punishmentId];
   if (p) {
     showBanner(hit, p);
+    const now = Date.now();
+    combo = now - lastHitAt < 8000 ? combo + 1 : 1;
+    lastHitAt = now;
+    if (combo >= (config.combo?.from ?? 3)) setTimeout(() => floatText(`КОМБО ×${combo}!`, '#ffec3d', 9), 900);
     currentHit = hit;
     hitToken++;
     lookAt(0, 0);
@@ -754,6 +913,15 @@ function renderLegend() {
   }).join('');
 }
 
+// ---------- главные обидчики ----------
+function renderLeaders(list) {
+  const el = $('leaders');
+  if (config.leaders?.enabled === false || !list?.length) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = `<div class="t">${esc(config.leaders?.title || '👑 Главные обидчики')}</div>` +
+    list.slice(0, 3).map((r, i) => `<div class="r"><span>${['🥇', '🥈', '🥉'][i]}</span><span class="n">${esc(r.user)}</span><span class="c">${r.coins}🪙</span></div>`).join('');
+}
+
 // ---------- инициализация ----------
 function renderScene() {
   const c = config.character;
@@ -796,6 +964,7 @@ function connectWs() {
   ws.onmessage = e => {
     const msg = JSON.parse(e.data);
     if (msg.type === 'hit') enqueue(msg.hit);
+    if (msg.type === 'leaders') renderLeaders(msg.leaders);
     if (msg.type === 'gifts') { giftIcons = msg.gifts || {}; renderLegend(); }
     if (msg.type === 'status') {
       $('status').textContent = msg.status.message;

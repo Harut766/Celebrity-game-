@@ -170,3 +170,33 @@ body { display: flex; align-items: center; justify-content: center; }
 #paper { transform-box: fill-box; transform-origin: 50% 50%; }
 #shinR { transform-box: fill-box; transform-origin: 85% 5%; animation: swing 1.6s ease-in-out infinite; }
 @keyframes swing { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(9deg); } }
+
+/* Чай, рука «Ван минут», зверьё */
+#teaGlass, #fingerHand { transform-box: fill-box; transform-origin: 50% 100%; }
+#teaGlass .steam { animation: steam 2.4s ease-in-out infinite; }
+@keyframes steam { 0%, 100% { opacity: .15; transform: translateY(4px); } 50% { opacity: .6; transform: translateY(-6px); } }
+#critters { pointer-events: none; z-index: 4; }
+.critter { position: absolute; left: 0; top: 0; will-change: transform; }
+.critter svg { display: block; overflow: visible; }
+.critter .bob { animation: bob .4s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes bob { 50% { transform: translateY(-4%); } }
+.critter .flap { animation: flap .22s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 90%; }
+@keyframes flap { 50% { transform: scaleY(-.6); } }
+
+/* Главные обидчики */
+#leaders {
+  position: absolute; z-index: 6;
+  right: calc(var(--u) * 3); top: calc(var(--u) * 3);
+  width: calc(var(--u) * 38);
+  background: rgba(20, 20, 30, .72);
+  border: calc(var(--u) * .3) solid rgba(255, 215, 90, .8);
+  border-radius: calc(var(--u) * 2);
+  padding: calc(var(--u) * 1) calc(var(--u) * 1.4);
+  color: #fff; font-weight: 700;
+  font-size: calc(var(--u) * 1.9);
+}
+#leaders .t { color: #ffd75a; text-align: center; font-size: calc(var(--u) * 2.1); margin-bottom: calc(var(--u) * .4); }
+#leaders .r { display: flex; gap: calc(var(--u) * .8); align-items: center; padding: calc(var(--u) * .2) 0; }
+#leaders .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#leaders .c { color: #ffd75a; white-space: nowrap; }
+.combo { color: #ffec3d; }

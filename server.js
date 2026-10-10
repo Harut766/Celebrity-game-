@@ -31,7 +31,7 @@ app.post('/api/test', (req, res) => {
   // Только с этого компьютера: через туннель (cloudflared и т.п.) тестовые удары запрещены
   if (req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']) return res.status(403).json({ error: 'test only from localhost' });
   const { coins = 1, giftName = '', user = 'Тест', repeatCount = 1 } = req.body || {};
-  const hits = handleGift({ coins: Number(coins), giftName, user, login: user, repeatCount: Number(repeatCount) });
+  const hits = handleGift({ coins: Number(coins), giftName, user, login: user, repeatCount: Number(repeatCount) }, { test: true });
   res.json({ hits: hits.length });
 });
 
@@ -68,6 +68,7 @@ function setStatus(patch) {
 
 wss.on('connection', ws => {
   ws.send(JSON.stringify({ type: 'status', status }));
+  ws.send(JSON.stringify({ type: 'leaders', leaders: leaders() }));
   // Оверлей сообщает о проблемах со звуком — показываем их здесь
   ws.on('message', raw => {
     try {
@@ -77,13 +78,25 @@ wss.on('connection', ws => {
   });
 });
 
-function handleGift(gift) {
+// Главные обидчики эфира (с момента запуска игры; тестовые удары не считаются)
+const tally = new Map();
+const leaders = () => [...tally.values()].sort((a, b) => b.coins - a.coins || b.hits - a.hits).slice(0, 3);
+
+function handleGift(gift, { test = false } = {}) {
   config = loadConfig();
   const hits = giftToHits(config, gift);
   const armenian = config.armenian?.enabled !== false && looksArmenian(config, gift.user, gift.login);
   for (const hit of hits) hit.armenian = armenian;
   console.log(`[gift] ${gift.user}: ${gift.giftName || '?'}${gift.giftId ? ` (id ${gift.giftId})` : ''} (${gift.coins} мон.) x${gift.repeatCount} -> ${hits[0]?.punishmentId ?? 'ничего'} x${hits.length}${hits[0]?.armenian ? ' (армянин!)' : ''}`);
   for (const hit of hits) broadcast({ type: 'hit', hit });
+  if (!test && hits.length) {
+    const key = gift.login || gift.user;
+    const row = tally.get(key) || { user: gift.user, coins: 0, hits: 0 };
+    row.coins += (gift.coins || 1) * (gift.repeatCount || 1);
+    row.hits += hits.length;
+    tally.set(key, row);
+    broadcast({ type: 'leaders', leaders: leaders() });
+  }
   return hits;
 }
 
