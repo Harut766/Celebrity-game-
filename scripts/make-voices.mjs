@@ -33,8 +33,32 @@ const dry = Boolean(args.dry);
 
 const config = JSON.parse(readFileSync(CONFIG_PATH, 'utf8'));
 
+// В октябре 2026 Microsoft закрыл для многих стран старый адрес озвучки (ошибка 403).
+// Те же голоса доступны по новому адресу: начинаем с него, а при 403 переключаемся на другой.
+const EDGE_ENDPOINTS = ['new', 'old'];
+let edgeEndpoint = 0;
+function patchEdge(MsEdgeTTS) {
+  if (MsEdgeTTS.__celebrityPatched) return;
+  MsEdgeTTS.__celebrityPatched = true;
+  const original = MsEdgeTTS.getSynthUrl.bind(MsEdgeTTS);
+  MsEdgeTTS.getSynthUrl = async () => {
+    if (EDGE_ENDPOINTS[edgeEndpoint] === 'old') return original();
+    const token = MsEdgeTTS.TRUSTED_CLIENT_TOKEN;
+    const gec = await MsEdgeTTS.generateSecMsGec(token);
+    return `wss://api.msedgeservices.com/tts/cognitiveservices/websocket/v1?Ocp-Apim-Subscription-Key=${token}`
+      + `&Sec-MS-GEC=${gec}&Sec-MS-GEC-Version=1-143.0.3650.75&ConnectionId=${MsEdgeTTS.generateUUID()}`;
+  };
+}
+/** После 403 пробуем другой адрес Microsoft. true — переключились. */
+function switchEdgeEndpoint(err) {
+  if (!/403/.test(err?.message || '')) return false;
+  edgeEndpoint = (edgeEndpoint + 1) % EDGE_ENDPOINTS.length;
+  return true;
+}
+
 if (args.preview) {
   const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
+  patchEdge(MsEdgeTTS);
   const text = typeof args.text === 'string' ? args.text : 'Это провокация! Кто кинул? Найти и наказать!';
   let names;
   if (args.voice) names = [voice];
@@ -60,7 +84,7 @@ if (args.preview) {
           out.on('finish', resolve); out.on('error', reject);
         });
         ok = true;
-      } catch { await new Promise(r => setTimeout(r, 600 * attempt)); }
+      } catch (e) { if (!switchEdgeEndpoint(e)) await new Promise(r => setTimeout(r, 600 * attempt)); }
       finally { try { tts.close(); } catch {} }
     }
     if (!ok) { console.log(`✗ ${name}: не получилось, пропускаю`); continue; }
@@ -93,6 +117,7 @@ if (args.list) {
 
 async function makeEdgeTts() {
   const { MsEdgeTTS, OUTPUT_FORMAT } = await import('msedge-tts');
+  patchEdge(MsEdgeTTS);
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // Одна фраза = новое соединение: сервис Microsoft часто закрывает сокет между запросами.
@@ -127,7 +152,8 @@ async function makeEdgeTts() {
       } catch (e) {
         lastError = e;
         try { unlinkSync(file); } catch {}
-        await sleep(700 * attempt);
+        if (switchEdgeEndpoint(e)) console.log(`  (403 — пробую ${EDGE_ENDPOINTS[edgeEndpoint] === 'new' ? 'новый' : 'старый'} адрес Microsoft)`);
+        else await sleep(700 * attempt);
       }
     }
     throw lastError;
