@@ -164,10 +164,14 @@ const MANIFEST = new URL('manifest.json', OUT_DIR);
 let manifest = {};
 try { manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')); } catch {}
 
+let failedInRow = 0, gaveUp = false, skippedForeign = 0;
 for (const [key, phrases, listVoice] of listPhrases(config)) {
+  if (gaveUp) break;
+  // Голос Mac говорит только по-русски: армянского диктора им не озвучиваем
+  if (engine === 'mac' && listVoice?.voice && !/^ru-/i.test(listVoice.voice)) { skippedForeign += phrases.length; continue; }
   // У дракона и диктора свои голоса из config.json (если не выбран движок mac)
   const opts = listVoice && engine === 'edge' ? { engine, voice, pitch, rate, ...listVoice } : { engine, voice, pitch, rate };
-  for (let i = 0; i < phrases.length; i++) {
+  for (let i = 0; i < phrases.length && !gaveUp; i++) {
     const ph = phrases[i];
     if (!ph.text) continue;
     // Файлы, которые пользователь положил сам (не из auto/), не трогаем
@@ -183,10 +187,13 @@ for (const [key, phrases, listVoice] of listPhrases(config)) {
       await run(ph.text, fileURLToPath(disk), opts);
       manifest[ph.text] = WEB_DIR + name;
       made++;
+      failedInRow = 0;
       console.log(`✓ ${name}  «${ph.text}»`);
     } catch (e) {
       failed++;
       console.error(`✗ «${ph.text}»: ${e.message}`);
+      // Сервис не пускает подряд — не тратим время на остальные фразы
+      if (++failedInRow >= 3) gaveUp = true;
     }
   }
 }
@@ -194,5 +201,7 @@ for (const [key, phrases, listVoice] of listPhrases(config)) {
 // Пути пишем в manifest.json, а не в config.json — обновления игры их не сотрут
 if (!dry) writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
 console.log(`\nГотово: озвучено ${made}, пропущено ${skipped}, ошибок ${failed}.`);
-if (failed && engine === 'edge') console.log('Сервис Microsoft сейчас недоступен — уже озвученные фразы работают. Попробуйте позже или: npm run voices -- --engine mac');
+if (skippedForeign) console.log(`Армянский диктор (${skippedForeign} фраз) голосом Mac не озвучивается — для него нужен голос Microsoft: npm run voices`);
+if (gaveUp) console.log('Сервис Microsoft сейчас не пускает — остановлено. Игра работает и без этих голосов.');
+if (failed && engine === 'edge') console.log('Уже озвученные фразы работают. Попробуйте позже ещё раз или озвучьте голосом Mac: npm run voices -- --engine mac');
 process.exit(failed ? 1 : 0);
