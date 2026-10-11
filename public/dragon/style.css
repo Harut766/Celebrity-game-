@@ -1,0 +1,145 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+body { font-family: 'Arial Black', 'Helvetica Neue', Arial, 'Noto Sans Armenian', sans-serif; color: #fff; }
+
+/* Сцена всегда 1080×1920 и масштабируется под окно */
+#stage {
+  position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden;
+  transform-origin: 0 0; background: #0b0a1a;
+  --sc1: #173f24; --sc2: #3f9a52; --bl1: #f0d488; --bl2: #a87a32; --wg1: #3a1010; --wg2: #b4473a;
+  --eye: #ffe14a; --glow: #ff7a1a; --spike: #e8dcbc;
+}
+#stage.shake { animation: shake .45s; }
+#stage.bigShake { animation: bigShake .9s; }
+@keyframes shake { 20% { transform: var(--fit) translate(-8px, 5px); } 40% { transform: var(--fit) translate(7px, -6px); } 60% { transform: var(--fit) translate(-5px, 3px); } 80% { transform: var(--fit) translate(4px, -2px); } }
+@keyframes bigShake { 10% { transform: var(--fit) translate(-22px, 12px); } 20% { transform: var(--fit) translate(20px, -16px); } 30% { transform: var(--fit) translate(-18px, 10px); } 45% { transform: var(--fit) translate(14px, -10px); } 60% { transform: var(--fit) translate(-10px, 6px); } 80% { transform: var(--fit) translate(6px, -3px); } }
+
+#scene, #dragon, #fx, #dim, #flash { position: absolute; }
+#scene { inset: 0; }
+#scene svg { width: 100%; height: 100%; display: block; }
+/* Окно дракона обрезано по краю скалы: падает и поднимается он «из-за горы» */
+#dragon { left: 0; top: 180px; width: 1080px; height: 1100px; overflow: hidden; transition: filter .08s; }
+#dragon svg { position: absolute; left: 90px; top: 200px; width: 900px; height: 900px; display: block; overflow: visible; }
+#dragon.hurt { filter: brightness(2.2) saturate(.4); }
+#fx { inset: 0; width: 1080px; height: 1920px; pointer-events: none; }
+#dim { inset: 0; background: radial-gradient(circle at 50% 45%, rgba(10,0,30,.35), rgba(0,0,10,.85)); opacity: 0; transition: opacity .6s; pointer-events: none; }
+#dim.on { opacity: 1; }
+#dim.red { background: radial-gradient(circle at 50% 40%, rgba(120,10,0,.3), rgba(40,0,0,.8)); }
+#flash { inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+
+.twinkle { animation: twinkle 3s ease-in-out infinite; }
+@keyframes twinkle { 50% { opacity: .1; } }
+.cloud { animation: drift 60s linear infinite alternate; }
+.c2 { animation-duration: 80s; animation-direction: alternate-reverse; }
+.c3 { animation-duration: 100s; }
+@keyframes drift { to { transform: translateX(120px); } }
+.flag .cloth { animation: wave 1.6s ease-in-out infinite; transform-origin: 6px 30px; transform-box: view-box; }
+.f2 .cloth { animation-delay: -.8s; }
+@keyframes wave { 50% { transform: skewY(6deg) scaleX(.94); } }
+.lavaCracks { animation: lava 2.4s ease-in-out infinite; }
+@keyframes lava { 50% { opacity: .35; } }
+.eyeGlow { animation: lava 2s ease-in-out infinite; }
+
+/* ---------- Полоса жизни ---------- */
+#hpBox { position: absolute; left: 40px; right: 40px; top: 168px; }
+#hpTitle { display: flex; justify-content: space-between; align-items: baseline; font-size: 40px; letter-spacing: 1px;
+  text-shadow: 0 3px 0 #000, 0 0 18px var(--glow); }
+#dragonLevel { font-size: 30px; color: #ffd86a; }
+#hpBar { position: relative; height: 54px; margin-top: 8px; border-radius: 27px; background: rgba(20,6,6,.85);
+  border: 4px solid #e8c35a; box-shadow: 0 0 0 3px #3a2006, 0 6px 22px rgba(0,0,0,.6), inset 0 4px 10px rgba(0,0,0,.7); overflow: hidden; }
+#hpFill, #hpGhost { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 22px; }
+#hpGhost { background: #fff3c0; transition: width .9s ease-in .35s; }
+#hpFill { background: linear-gradient(180deg, #ff6a4a, #c80e0e 55%, #7a0404); transition: width .25s ease-out;
+  box-shadow: inset 0 3px 0 rgba(255,255,255,.35); }
+#hpFill::after { content: ''; position: absolute; inset: 0; border-radius: inherit;
+  background: repeating-linear-gradient(90deg, transparent 0 46px, rgba(0,0,0,.18) 46px 50px); }
+#hpBar.heal #hpFill { background: linear-gradient(180deg, #8aff7a, #22b822 55%, #0a6a0a); }
+#hpFinish { position: absolute; top: 0; bottom: 0; width: 4px; background: #ffd86a; box-shadow: 0 0 10px #ffd86a; opacity: .8; }
+#hpText { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 30px;
+  text-shadow: 0 2px 0 #000, 0 0 6px #000; }
+#hpBar.hit { animation: barHit .3s; }
+@keyframes barHit { 30% { transform: translateX(-6px) scaleY(1.08); } 60% { transform: translateX(5px); } }
+#hpNote { margin-top: 8px; text-align: center; font-size: 26px; color: #ffe8a0; text-shadow: 0 2px 0 #000, 0 0 8px #000; min-height: 34px; }
+#hpNote.alert { color: #fff; animation: pulse 1s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.06); color: #ffd86a; } }
+
+/* ---------- Цены: подарок → удар ---------- */
+#hotbar { position: absolute; left: 24px; right: 24px; top: 336px; margin: 0; padding: 0; list-style: none;
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+#hotbar li { background: linear-gradient(180deg, rgba(60,14,10,.88), rgba(24,6,6,.88)); border: 3px solid #b8862e;
+  border-radius: 18px; padding: 6px 4px 6px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,.5); position: relative; }
+#hotbar li.top { border-color: #ffd86a; box-shadow: 0 0 18px rgba(255,200,80,.7); }
+#hotbar .gift { height: 54px; display: flex; align-items: center; justify-content: center; gap: 2px; font-size: 40px; line-height: 1; }
+#hotbar .gift img { width: 54px; height: 54px; object-fit: contain; }
+#hotbar .atk { font-size: 30px; position: absolute; right: 2px; top: 34px; filter: drop-shadow(0 2px 2px #000); }
+#hotbar .name { font-size: 17px; line-height: 1.1; margin-top: 4px; min-height: 38px; display: flex; align-items: center; justify-content: center; text-shadow: 0 2px 0 #000; }
+#hotbar .price { font-size: 19px; color: #ffd86a; text-shadow: 0 2px 0 #000; }
+#hotbar li.pop { animation: pop .5s; }
+@keyframes pop { 40% { transform: scale(1.18); } }
+
+/* ---------- Топ урона ---------- */
+#leaders { position: absolute; right: 22px; top: 520px; width: 330px; background: rgba(14,6,20,.72);
+  border: 3px solid rgba(232,195,90,.7); border-radius: 20px; padding: 10px 12px; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+#leaders:empty { display: none; }
+#leaders h3 { margin: 0 0 6px; font-size: 22px; color: #ffd86a; text-align: center; text-shadow: 0 2px 0 #000; }
+#leaders .row { display: flex; align-items: center; gap: 8px; font-size: 20px; padding: 3px 0; }
+#leaders .row .ava { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #e8c35a; object-fit: cover; flex: none; background: #333; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+#leaders .row .nm { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-shadow: 0 2px 0 #000; }
+#leaders .row .dm { color: #ff9a6a; text-shadow: 0 2px 0 #000; }
+#leaders .row.first .nm { color: #ffd86a; }
+
+/* ---------- Реплики дракона ---------- */
+#speech { position: absolute; left: 30px; top: 500px; max-width: 520px; background: #fff7e6; color: #2a0a0a;
+  font-size: 30px; line-height: 1.2; padding: 16px 22px; border-radius: 26px; border: 4px solid #3a0a0a;
+  box-shadow: 0 8px 24px rgba(0,0,0,.6); font-family: 'Arial Black', Arial, sans-serif; }
+#speech::after { content: ''; position: absolute; left: 150px; bottom: -30px; border: 16px solid transparent; border-top: 18px solid #3a0a0a; }
+#speech.show { animation: bubble .3s ease-out; }
+@keyframes bubble { from { transform: scale(.4) translateY(30px); opacity: 0; } }
+
+/* ---------- Большие надписи ---------- */
+#banner { position: absolute; left: 20px; right: 20px; top: 990px; text-align: center; pointer-events: none; }
+#banner .big { font-size: 74px; line-height: 1.05; white-space: nowrap; color: #fff; letter-spacing: 2px;
+  text-shadow: 0 6px 0 #000, 0 0 30px var(--bc, #ffd86a), 0 0 60px var(--bc, #ffd86a); }
+#banner .sub { font-size: 40px; color: var(--bc, #ffd86a); margin-top: 10px; text-shadow: 0 4px 0 #000, 0 0 12px #000; }
+#banner .who { display: inline-flex; align-items: center; gap: 14px; margin-top: 16px; font-size: 40px; background: rgba(0,0,0,.55);
+  padding: 8px 26px 8px 8px; border-radius: 50px; border: 3px solid var(--bc, #ffd86a); }
+#banner .who img, #banner .who .ava { width: 70px; height: 70px; border-radius: 50%; object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+#banner.show { animation: slam .55s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes slam { from { transform: scale(3); opacity: 0; } }
+
+/* ---------- Герой эфира ---------- */
+#hero { position: absolute; left: 0; right: 0; top: 560px; text-align: center; pointer-events: none; }
+#hero .rays { position: absolute; left: 50%; top: 250px; width: 1400px; height: 1400px; margin: -700px 0 0 -700px;
+  background: repeating-conic-gradient(rgba(255,215,100,.28) 0 10deg, transparent 10deg 20deg); border-radius: 50%;
+  -webkit-mask: radial-gradient(circle, #000 20%, transparent 65%); mask: radial-gradient(circle, #000 20%, transparent 65%);
+  animation: spin 14s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#hero .crown { position: relative; width: 190px; margin: 0 auto -40px; filter: drop-shadow(0 6px 10px #000); animation: crown 1.2s ease-in-out infinite alternate; }
+@keyframes crown { to { transform: translateY(-14px) rotate(-4deg); } }
+#hero .ava { position: relative; width: 300px; height: 300px; margin: 0 auto; border-radius: 50%; border: 10px solid #f6c84a;
+  box-shadow: 0 0 0 6px #8a5a10, 0 0 60px #ffd86a; overflow: hidden; background: #6a1a1a; display: flex; align-items: center; justify-content: center; font-size: 130px; }
+#hero .ava img { width: 100%; height: 100%; object-fit: cover; }
+#hero .t1 { position: relative; font-size: 84px; margin-top: 24px; color: #ffd86a; text-shadow: 0 6px 0 #5a2a00, 0 0 30px #ff9a2a; }
+#hero .t2 { position: relative; font-size: 40px; color: #fff; text-shadow: 0 3px 0 #000; }
+#hero .nm { position: relative; font-size: 64px; margin-top: 10px; color: #fff; text-shadow: 0 5px 0 #000, 0 0 20px #ffd86a; max-width: 1000px; margin-left: auto; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hero .t3 { position: relative; font-size: 32px; color: #ffe8a0; margin-top: 10px; text-shadow: 0 3px 0 #000; }
+#hero.show { animation: slam .7s cubic-bezier(.2, 1.5, .4, 1); }
+
+/* ---------- Мелкие сообщения и подсказки ---------- */
+#toasts { position: absolute; left: 24px; top: 1080px; width: 760px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast { align-self: flex-start; display: flex; align-items: center; gap: 10px; font-size: 26px; background: rgba(10,4,18,.78);
+  border: 2px solid rgba(232,195,90,.6); border-radius: 30px; padding: 5px 18px 5px 5px; text-shadow: 0 2px 0 #000;
+  animation: toastIn .35s ease-out, toastOut .5s ease-in 3.2s forwards; max-width: 100%; line-height: 1.15; }
+.toast img, .toast .ava { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex: none; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+@keyframes toastIn { from { transform: translateX(-120%); } }
+@keyframes toastOut { to { transform: translateX(-120%); opacity: 0; } }
+#hint { position: absolute; left: 0; right: 0; top: 1262px; text-align: center; font-size: 28px; color: #ffe8a0;
+  text-shadow: 0 2px 0 #000, 0 0 10px #000; transition: opacity .5s; }
+
+/* ---------- Тест-панель ---------- */
+#testPanel { position: fixed; right: 8px; bottom: 8px; width: 340px; background: rgba(0,0,0,.85); padding: 10px; border-radius: 12px;
+  font: 14px Arial, sans-serif; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
+#testPanel[hidden] { display: none; }
+#testPanel button { font: 15px Arial, sans-serif; padding: 6px 8px; margin: 2px; border-radius: 8px; border: 0; cursor: pointer; }
+#testPanel input { width: 90px; }
+#status { color: #ffb0b0; } #status.ok { color: #9f9; }

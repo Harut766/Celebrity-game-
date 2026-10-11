@@ -96,11 +96,11 @@ async function makeEdgeTts() {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // Одна фраза = новое соединение: сервис Microsoft часто закрывает сокет между запросами.
-  async function once(text, file) {
+  async function once(text, file, opts) {
     const tts = new MsEdgeTTS();
     try {
-      await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
-      const { audioStream } = await tts.toStream(text, { pitch, rate });
+      await tts.setMetadata(opts.voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
+      const { audioStream } = await tts.toStream(text, { pitch: opts.pitch, rate: opts.rate });
       await new Promise((resolve, reject) => {
         const out = createWriteStream(file);
         audioStream.pipe(out);
@@ -118,11 +118,11 @@ async function makeEdgeTts() {
   await probe.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3);
   try { probe.close(); } catch {}
 
-  return async (text, file) => {
+  return async (text, file, opts) => {
     let lastError;
     for (let attempt = 1; attempt <= 4; attempt++) {
       try {
-        await once(text, file);
+        await once(text, file, opts);
         return;
       } catch (e) {
         lastError = e;
@@ -164,13 +164,15 @@ const MANIFEST = new URL('manifest.json', OUT_DIR);
 let manifest = {};
 try { manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')); } catch {}
 
-for (const [key, phrases] of listPhrases(config)) {
+for (const [key, phrases, listVoice] of listPhrases(config)) {
+  // У дракона и диктора свои голоса из config.json (если не выбран движок mac)
+  const opts = listVoice && engine === 'edge' ? { engine, voice, pitch, rate, ...listVoice } : { engine, voice, pitch, rate };
   for (let i = 0; i < phrases.length; i++) {
     const ph = phrases[i];
     if (!ph.text) continue;
     // Файлы, которые пользователь положил сам (не из auto/), не трогаем
     if (ph.file && !ph.file.startsWith(WEB_DIR)) { skipped++; continue; }
-    const name = voiceFileName(key, i, ph.text, { engine, voice, pitch, rate });
+    const name = voiceFileName(key, i, ph.text, opts);
     const disk = new URL(name, OUT_DIR);
     // Файл с таким текстом и голосом уже есть на диске — просто запоминаем его
     if (existsSync(disk)) { manifest[ph.text] = WEB_DIR + name; skipped++; continue; }
@@ -178,7 +180,7 @@ for (const [key, phrases] of listPhrases(config)) {
     try {
       const run = await getSynth();
       if (!run) { failed++; continue; }
-      await run(ph.text, fileURLToPath(disk));
+      await run(ph.text, fileURLToPath(disk), opts);
       manifest[ph.text] = WEB_DIR + name;
       made++;
       console.log(`✓ ${name}  «${ph.text}»`);

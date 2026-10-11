@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="hy">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Давид против Вишапа</title>
+<link rel="stylesheet" href="/dragon/style.css">
+</head>
+<body>
+<div id="stage">
+  <div id="scene"></div>
+  <div id="dragon"></div>
+  <canvas id="fx" width="1080" height="1920"></canvas>
+  <div id="dim"></div>
+  <div id="flash"></div>
+
+  <div id="hpBox">
+    <div id="hpTitle"><span id="dragonName"></span><span id="dragonLevel"></span></div>
+    <div id="hpBar"><div id="hpGhost"></div><div id="hpFill"></div><div id="hpFinish"></div><div id="hpText"></div></div>
+    <div id="hpNote"></div>
+  </div>
+  <ul id="hotbar"></ul>
+  <div id="leaders"></div>
+  <div id="speech" hidden></div>
+  <div id="banner" hidden></div>
+  <div id="hero" hidden></div>
+  <div id="toasts"></div>
+  <div id="hint"></div>
+</div>
+
+<div id="testPanel" hidden>
+  <div id="status">…</div>
+  <div id="testButtons"></div>
+  <div id="testExtra">
+    <button data-kind="like">❤️ лайки ×15</button>
+    <button data-kind="join">👋 зашёл</button>
+    <button data-kind="follow">➕ подписка</button>
+    <button data-kind="share">🔁 поделился</button>
+    <button data-local="fire">🔥 огонь</button>
+    <button data-local="taunt">💬 фраза</button>
+  </div>
+  <label>Ник <input id="testUser" value="Арам" size="12"></label>
+  <label>Серия ×<input id="testRepeat" type="number" min="1" max="99" value="1"></label>
+</div>
+
+<script src="/dragon/art.js"></script>
+<script src="/dragon/game.js"></script>
+</body>
+</html>

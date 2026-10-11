@@ -4,8 +4,10 @@ import { readFileSync } from 'node:fs';
 import { WebSocketServer } from 'ws';
 import { TikTokLiveConnection, WebcastEvent, ControlEvent } from 'tiktok-live-connector';
 import { giftToHits, normalizeTikTokGift, looksArmenian, createStreakTracker } from './src/punish.js';
+import { createBattle, dragonSettings, avatarOf } from './src/dragon.js';
 import { attachVoiceFiles } from './src/voices.js';
 import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 const CONFIG_PATH = new URL('./config.json', import.meta.url);
 const PUBLIC_DIR = fileURLToPath(new URL('./public', import.meta.url));
@@ -16,8 +18,16 @@ const username = process.argv[2] || process.env.TIKTOK_USERNAME || config.tiktok
 const port = Number(process.env.PORT || config.port || 3000);
 const RECONNECT_MS = 30_000;
 
+// Какая игра на главной странице: "dragon" (Давид против Вишапа) или "outhouse" (будка с наказаниями)
+const isDragon = () => (config.game || 'outhouse') === 'dragon';
+
 const app = express();
 app.use(express.json());
+app.get('/', (_req, res) => {
+  config = loadConfig();
+  res.sendFile(join(PUBLIC_DIR, isDragon() ? 'dragon/index.html' : 'index.html'));
+});
+app.get('/outhouse', (_req, res) => res.sendFile(join(PUBLIC_DIR, 'index.html')));
 app.use(express.static(PUBLIC_DIR));
 
 // Конфиг перечитывается на каждый запрос: цены можно менять без перезапуска.
@@ -30,9 +40,16 @@ app.get('/api/config', (_req, res) => {
 app.post('/api/test', (req, res) => {
   // Только с этого компьютера: через туннель (cloudflared и т.п.) тестовые удары запрещены
   if (req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']) return res.status(403).json({ error: 'test only from localhost' });
-  const { coins = 1, giftName = '', user = 'Тест', repeatCount = 1 } = req.body || {};
-  const hits = handleGift({ coins: Number(coins), giftName, user, login: user, repeatCount: Number(repeatCount) }, { test: true });
-  res.json({ hits: hits.length });
+  const { kind = 'gift', coins = 1, giftName = '', user = 'Тест', repeatCount = 1, count = 1 } = req.body || {};
+  const who = { user, login: user, avatar: '' };
+  if (kind === 'like') onLikes(who, Number(count) || 1);
+  else if (kind === 'join') onJoin(who);
+  else if (kind === 'follow' || kind === 'share') onSocial(who, kind);
+  else {
+    const hits = onGift({ coins: Number(coins), giftName, ...who, repeatCount: Number(repeatCount) }, { test: true });
+    return res.json({ hits });
+  }
+  res.json({ ok: true });
 });
 
 // Иконки подарков TikTok (имя -> картинка и цена) для таблички цен. Пусто, пока не подключились к эфиру.
@@ -69,6 +86,7 @@ function setStatus(patch) {
 wss.on('connection', ws => {
   ws.send(JSON.stringify({ type: 'status', status }));
   ws.send(JSON.stringify({ type: 'leaders', leaders: leaders() }));
+  ws.send(JSON.stringify({ type: 'battle', state: battle.state(), leaders: battle.leaders() }));
   // Оверлей сообщает о проблемах со звуком — показываем их здесь
   ws.on('message', raw => {
     try {
@@ -100,6 +118,51 @@ function handleGift(gift, { test = false } = {}) {
   return hits;
 }
 
+// ---------- Давид против Вишапа ----------
+const battle = createBattle(() => dragonSettings(config));
+const fmtUser = p => p.user + (p.login && p.login !== p.user ? ` (@${p.login})` : '');
+
+function onGift(gift, opts) {
+  config = loadConfig();
+  if (!isDragon()) return handleGift(gift, opts).length;
+  const ev = battle.gift({ user: gift.user, login: gift.login, avatar: gift.avatar }, gift);
+  if (!ev) return 0;
+  console.log(`[gift] ${fmtUser(gift)}: ${gift.giftName || '?'}${gift.giftId ? ` (id ${gift.giftId})` : ''} (${gift.coins} мон.) x${gift.repeatCount} -> ${ev.attackId}, урон ${ev.damage}${ev.crit ? ' КРИТ' : ''}, у дракона ${ev.hpAfter}/${ev.maxHp}${ev.killed ? ` — ПОВЕРЖЕН! Герой: ${gift.user}` : ''}`);
+  broadcast({ type: 'attack', attack: ev });
+  broadcast({ type: 'leaders', leaders: battle.leaders(), dragon: true });
+  return ev.count;
+}
+
+function onLikes(p, count) {
+  if (!isDragon()) return;
+  const ev = battle.likes(p, count);
+  broadcast({ type: 'likes', likes: ev });
+  if (ev.dealt) broadcast({ type: 'leaders', leaders: battle.leaders(), dragon: true });
+}
+
+function onSocial(p, kind) {
+  if (!isDragon()) return;
+  console.log(`[${kind}] ${fmtUser(p)}`);
+  broadcast({ type: 'social', social: battle.social(p, kind) });
+  broadcast({ type: 'leaders', leaders: battle.leaders(), dragon: true });
+}
+
+function onJoin(p) {
+  if (isDragon()) broadcast({ type: 'join', join: p });
+}
+
+setInterval(() => {
+  if (!isDragon()) return;
+  const ev = battle.tick(5000);
+  if (ev) broadcast({ type: 'heal', heal: ev });
+}, 5000);
+
+const who = data => ({
+  user: data.user?.nickname || data.user?.uniqueId || 'Аноним',
+  login: data.user?.uniqueId || '',
+  avatar: avatarOf(data.user),
+});
+
 function connectTikTok() {
   const connection = new TikTokLiveConnection(username, {
     signApiKey: process.env.EULER_API_KEY || undefined,
@@ -110,8 +173,13 @@ function connectTikTok() {
   connection.on(WebcastEvent.GIFT, data => {
     const count = newGifts(data);
     if (!count) return;
-    handleGift({ ...normalizeTikTokGift(data), repeatCount: count });
+    onGift({ ...normalizeTikTokGift(data), avatar: avatarOf(data.user), repeatCount: count });
   });
+  connection.on(WebcastEvent.LIKE, data => onLikes(who(data), data.likeCount || 1));
+  connection.on(WebcastEvent.FOLLOW, data => onSocial(who(data), 'follow'));
+  connection.on(WebcastEvent.SHARE, data => onSocial(who(data), 'share'));
+  connection.on(WebcastEvent.MEMBER, data => onJoin(who(data)));
+  connection.on(WebcastEvent.CHAT, data => onJoin(who(data)));
 
   let retry = null;
   const scheduleRetry = () => {
