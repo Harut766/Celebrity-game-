@@ -149,11 +149,21 @@
 
   let ws = null;
   const reported = new Set();
+  const unsent = [];
+  // Сообщения в Терминал игры (каждое один раз). Пока нет связи — копим.
   function report(text) {
     if (reported.has(text)) return;
     reported.add(text);
-    try { ws?.readyState === 1 && ws.send(JSON.stringify({ type: 'log', text })); } catch {}
+    unsent.push(text);
+    flushReports();
   }
+  function flushReports() {
+    while (unsent.length && ws?.readyState === 1) {
+      try { ws.send(JSON.stringify({ type: 'log', text: unsent.shift() })); } catch { break; }
+    }
+  }
+  addEventListener('error', e => report(`ошибка: ${e.message} (${String(e.filename).split('/').pop()}:${e.lineno})`));
+  addEventListener('unhandledrejection', e => report(`ошибка: ${e.reason?.message || e.reason}`));
 
   let speaking = null;
   function say(list, { force = false } = {}) {
@@ -584,7 +594,11 @@
     if (!li) return;
     li.classList.remove('pop'); void li.offsetWidth; li.classList.add('pop');
   }
+  let leadersJson = '';
   function renderLeaders(list) {
+    const json = JSON.stringify(list || []);
+    if (json === leadersJson) return;
+    leadersJson = json;
     if (!list?.length) { $('leaders').innerHTML = ''; return; }
     $('leaders').innerHTML = `<h3>⚔️ Топ урона</h3>` + list.map((r, i) =>
       `<div class="row ${i === 0 ? 'first' : ''}">${avatarHtml(r)}<span class="nm">${['🥇', '🥈', '🥉'][i] || ''} ${esc(r.user)}</span><span class="dm">${fmt(r.damage)}</span></div>`).join('');
@@ -640,11 +654,12 @@
       if (task.blocking) {
         while (inflight > 0) await sleep(50);
         busy = true;
-        try { await task.run(); } catch (e) { console.error(e); }
+        // Зрелище не может зависнуть навсегда: максимум 25 секунд
+        try { await Promise.race([task.run(), sleep(25000)]); } catch (e) { report(`ошибка в анимации: ${e.message}`); }
         busy = false;
       } else {
         inflight++;
-        task.run().catch(console.error).finally(() => { inflight--; });
+        Promise.race([task.run(), sleep(15000)]).catch(e => report(`ошибка в анимации: ${e.message}`)).finally(() => { inflight--; });
         await sleep(queue.length > 8 ? 120 : task.gap ?? 300);
       }
     }
@@ -1067,19 +1082,25 @@
     for (let i = 0; i < 8; i++) emit({ type: 'spark', x: p.x + rand(-120, 120), y: p.y + rand(-80, 80), vx: 0, vy: -120, life: 1, size: 4, color: '#8aff7a', drag: 0 });
     if (Math.random() < .3 && idle() && !speaking) say('heal');
   }
+  // Сервер присылает состояние боя при подключении и каждые 10 секунд — оверлей сверяется с ним
   function onBattle(msg) {
     const s = msg.state;
-    if (busy || queue.length) return;
-    hp.level = s.level; hp.max = s.maxHp; hp.cur = s.hp;
-    lastHero = s.lastHero;
-    applyTheme(s.level);
-    renderHp();
     renderLeaders(msg.leaders);
+    lastHero = s.lastHero;
+    if (!idle() || rig.dead) { hp.latest = { level: s.level, hp: s.hp, max: s.maxHp }; renderNote(); return; }
+    if (s.level !== hp.level) applyTheme(s.level);
+    hp.level = s.level; hp.max = s.maxHp; hp.cur = s.hp;
+    renderHp();
   }
 
   // ---------- главный цикл ----------
   let lastT = performance.now(), emberT = 0, smokeT = 0, heartT = 0;
   function frame(now) {
+    // Ошибка в одном кадре не должна останавливать всю анимацию
+    try { step(now); } catch (e) { report(`ошибка в кадре: ${e.message}`); }
+    requestAnimationFrame(frame);
+  }
+  function step(now) {
     const dt = Math.min(.05, (now - lastT) / 1000);
     lastT = now;
     for (let i = tweens.length - 1; i >= 0; i--) {
@@ -1111,7 +1132,6 @@
     for (const e of ents) e.draw();
     drawParticles(dt);
     drawTexts(dt);
-    requestAnimationFrame(frame);
   }
 
   function drawParticles(dt) {
@@ -1194,9 +1214,16 @@
   }
 
   // ---------- связь с сервером ----------
+  // Соединение через туннель (cloudflared) может оборваться молча. Сервер пишет каждые 10 секунд —
+  // если 25 секунд тишина, переподключаемся сами.
+  let lastMsgAt = Date.now(), reconnects = 0;
   function connectWs() {
-    ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
-    ws.onmessage = e => {
+    const sock = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
+    ws = sock;
+    lastMsgAt = Date.now();
+    sock.onmessage = e => {
+      if (ws !== sock) return;
+      lastMsgAt = Date.now();
       const msg = JSON.parse(e.data);
       if (msg.type === 'attack') onAttack(msg.attack);
       else if (msg.type === 'likes') onLikes(msg.likes);
@@ -1208,9 +1235,25 @@
       else if (msg.type === 'gifts') { giftIcons = msg.gifts || {}; renderHotbar(); }
       else if (msg.type === 'status') { $('status').textContent = msg.status.message; $('status').className = msg.status.connected ? 'ok' : ''; }
     };
-    ws.onopen = () => refreshConfig();
-    ws.onclose = () => { $('status').textContent = 'Нет связи с сервером, переподключение…'; setTimeout(connectWs, 2000); };
+    sock.onopen = () => {
+      if (reconnects) report(`переподключился к серверу (${reconnects}-й раз)`);
+      flushReports();
+      refreshConfig();
+    };
+    sock.onclose = () => {
+      if (ws !== sock) return;
+      $('status').textContent = 'Нет связи с сервером, переподключение…';
+      setTimeout(reconnect, 2000);
+    };
   }
+  function reconnect() {
+    const old = ws;
+    ws = null;
+    try { old?.close(); } catch {}
+    reconnects++;
+    connectWs();
+  }
+  setInterval(() => { if (ws && ws.readyState !== WebSocket.CLOSED && Date.now() - lastMsgAt > 25000) reconnect(); }, 5000);
   async function refreshConfig() {
     try {
       const fresh = await (await fetch('/api/config')).json();

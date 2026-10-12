@@ -77,3 +77,13 @@ test('аватарка: берём не .heic', () => {
   assert.equal(avatarOf({ profilePicture: { url: ['https://x/a.heic', 'https://x/a.webp'] } }), 'https://x/a.webp');
   assert.equal(avatarOf({}), '');
 });
+
+test('бой продолжается после перезапуска сервера', () => {
+  const a = createBattle(() => settings({ baseHp: 1000 }));
+  a.gift(user('Арам'), { coins: 30 });
+  const b = createBattle(() => settings({ baseHp: 1000 }), { saved: JSON.parse(JSON.stringify(a.save())) });
+  assert.equal(b.state().hp, 700);
+  assert.equal(b.leaders()[0].user, 'Арам');
+  b.gift(user('Арам'), { coins: 1 });
+  assert.equal(b.leaders()[0].damage, 310);
+});

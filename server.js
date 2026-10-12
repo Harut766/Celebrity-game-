@@ -1,6 +1,6 @@
 import express from 'express';
 import { createServer } from 'node:http';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { WebSocketServer } from 'ws';
 import { TikTokLiveConnection, WebcastEvent, ControlEvent } from 'tiktok-live-connector';
 import { giftToHits, normalizeTikTokGift, looksArmenian, createStreakTracker } from './src/punish.js';
@@ -84,6 +84,10 @@ function setStatus(patch) {
 }
 
 wss.on('connection', ws => {
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
+  console.log(`[оверлей] подключился (открыто окон: ${wss.clients.size})`);
+  ws.on('close', () => console.log(`[оверлей] отключился (открыто окон: ${wss.clients.size})`));
   ws.send(JSON.stringify({ type: 'status', status }));
   ws.send(JSON.stringify({ type: 'leaders', leaders: leaders() }));
   ws.send(JSON.stringify({ type: 'battle', state: battle.state(), leaders: battle.leaders() }));
@@ -119,7 +123,22 @@ function handleGift(gift, { test = false } = {}) {
 }
 
 // ---------- Давид против Вишапа ----------
-const battle = createBattle(() => dragonSettings(config));
+// Бой сохраняется в файл: после перезапуска сервера (в течение 3 часов) дракон и топ продолжаются
+const BATTLE_FILE = new URL('./battle-state.json', import.meta.url);
+let saved = null;
+try {
+  saved = JSON.parse(readFileSync(BATTLE_FILE, 'utf8'));
+  if (Date.now() - (saved.savedAt || 0) > 3 * 3600_000) saved = null;
+  else console.log(`[бой] продолжаем: Вишап ${saved.level}-го уровня, жизнь ${saved.hp}/${saved.maxHp}`);
+} catch {}
+const battle = createBattle(() => dragonSettings(config), { saved });
+let saveTimer = null;
+function saveBattle() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { writeFileSync(BATTLE_FILE, JSON.stringify(battle.save())); } catch (e) { console.log(`[бой] не удалось сохранить: ${e.message}`); }
+  }, 2000);
+}
 const fmtUser = p => p.user + (p.login && p.login !== p.user ? ` (@${p.login})` : '');
 
 function onGift(gift, opts) {
@@ -130,14 +149,20 @@ function onGift(gift, opts) {
   console.log(`[gift] ${fmtUser(gift)}: ${gift.giftName || '?'}${gift.giftId ? ` (id ${gift.giftId})` : ''} (${gift.coins} мон.) x${gift.repeatCount} -> ${ev.attackId}, урон ${ev.damage}${ev.crit ? ' КРИТ' : ''}, у дракона ${ev.hpAfter}/${ev.maxHp}${ev.killed ? ` — ПОВЕРЖЕН! Герой: ${gift.user}` : ''}`);
   broadcast({ type: 'attack', attack: ev });
   broadcast({ type: 'leaders', leaders: battle.leaders(), dragon: true });
+  saveBattle();
   return ev.count;
 }
 
+// Лайки не пишем каждый — только сводку раз в 30 секунд
+let likesTotal = 0;
+setInterval(() => { if (likesTotal) console.log(`[лайки] за 30 с: ${likesTotal}`); likesTotal = 0; }, 30_000);
+
 function onLikes(p, count) {
   if (!isDragon()) return;
+  likesTotal += count;
   const ev = battle.likes(p, count);
   broadcast({ type: 'likes', likes: ev });
-  if (ev.dealt) broadcast({ type: 'leaders', leaders: battle.leaders(), dragon: true });
+  if (ev.dealt) { broadcast({ type: 'leaders', leaders: battle.leaders(), dragon: true }); saveBattle(); }
 }
 
 function onSocial(p, kind) {
@@ -145,6 +170,7 @@ function onSocial(p, kind) {
   console.log(`[${kind}] ${fmtUser(p)}`);
   broadcast({ type: 'social', social: battle.social(p, kind) });
   broadcast({ type: 'leaders', leaders: battle.leaders(), dragon: true });
+  saveBattle();
 }
 
 function onJoin(p) {
@@ -154,8 +180,19 @@ function onJoin(p) {
 setInterval(() => {
   if (!isDragon()) return;
   const ev = battle.tick(5000);
-  if (ev) broadcast({ type: 'heal', heal: ev });
+  if (ev) { broadcast({ type: 'heal', heal: ev }); saveBattle(); }
 }, 5000);
+
+// Каждые 10 секунд: проверяем, живо ли соединение с оверлеем, и присылаем ему состояние боя.
+// Через туннель (cloudflared) соединение иногда обрывается молча — так оверлей это заметит и переподключится.
+setInterval(() => {
+  for (const c of wss.clients) {
+    if (c.isAlive === false) { c.terminate(); continue; }
+    c.isAlive = false;
+    try { c.ping(); } catch {}
+  }
+  if (isDragon()) broadcast({ type: 'battle', state: battle.state(), leaders: battle.leaders() });
+}, 10_000);
 
 const who = data => ({
   user: data.user?.nickname || data.user?.uniqueId || 'Аноним',

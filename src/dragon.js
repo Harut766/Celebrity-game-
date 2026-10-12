@@ -41,7 +41,7 @@ export function avatarOf(user) {
  * Состояние боя. getSettings() вызывается на каждое событие — настройки можно менять без перезапуска.
  * Все методы возвращают событие для оверлея (или null).
  */
-export function createBattle(getSettings, { random = Math.random, now = Date.now } = {}) {
+export function createBattle(getSettings, { random = Math.random, now = Date.now, saved = null } = {}) {
   let s = getSettings();
   let level = 1;
   let maxHp = levelHp(s, 1);
@@ -50,6 +50,12 @@ export function createBattle(getSettings, { random = Math.random, now = Date.now
   let lastHero = null;
   let lastDamageAt = now();
   const board = new Map();
+  // Продолжаем бой после перезапуска сервера
+  if (saved?.level >= 1 && saved.maxHp > 0) {
+    ({ level, maxHp, kills = 0, lastHero = null } = saved);
+    hp = Math.min(Math.max(1, saved.hp), maxHp);
+    for (const row of saved.board || []) board.set(row.login || row.user, { ...row });
+  }
 
   const finishFloor = () => Math.ceil(maxHp * s.likesFinishLimit);
   const state = () => ({ level, hp, maxHp, kills, lastHero, finishAt: finishFloor() });
@@ -84,6 +90,8 @@ export function createBattle(getSettings, { random = Math.random, now = Date.now
 
   return {
     state,
+    /** Всё, что нужно, чтобы продолжить бой после перезапуска */
+    save: () => ({ level, hp, maxHp, kills, lastHero, board: [...board.values()], savedAt: now() }),
     leaders: () => [...board.values()].sort((a, b) => b.damage - a.damage).slice(0, s.leadersCount),
 
     gift(p, gift) {
