@@ -16,7 +16,11 @@ const loadConfig = () => attachVoiceFiles(JSON.parse(readFileSync(CONFIG_PATH, '
 let config = loadConfig();
 const username = process.argv[2] || process.env.TIKTOK_USERNAME || config.tiktokUsername;
 const port = Number(process.env.PORT || config.port || 3000);
-const RECONNECT_MS = 30_000;
+// Пока эфир не запущен, стучимся в TikTok всё реже: 30 с, 1 мин, 2 мин (не чаще)
+const RECONNECT_MS = 30_000, RECONNECT_MAX_MS = 120_000;
+let failures = 0;
+const retryDelay = () => Math.min(RECONNECT_MAX_MS, RECONNECT_MS * 2 ** Math.max(0, failures - 1));
+const inSec = ms => ms >= 60_000 ? `${ms / 60_000} мин` : `${ms / 1000} с`;
 
 // Какая игра на главной странице: "dragon" (Давид против Вишапа) или "outhouse" (будка с наказаниями)
 const isDragon = () => (config.game || 'outhouse') === 'dragon';
@@ -221,16 +225,18 @@ function connectTikTok() {
   let retry = null;
   const scheduleRetry = () => {
     if (retry) return;
-    retry = setTimeout(() => { retry = null; connectTikTok(); }, RECONNECT_MS);
+    retry = setTimeout(() => { retry = null; connectTikTok(); }, retryDelay());
   };
 
   connection.on(ControlEvent.DISCONNECTED, () => {
-    setStatus({ connected: false, message: `Отключено от @${username}, переподключение через 30 с` });
+    failures = 1;
+    setStatus({ connected: false, message: `Отключено от @${username}, переподключение через ${inSec(retryDelay())}` });
     scheduleRetry();
   });
 
   connection.connect()
     .then(state => {
+      failures = 0;
       setStatus({ connected: true, message: `Подключено к эфиру @${username} (room ${state.roomId})` });
       if (giftIconsUnavailable) return;
       connection.fetchAvailableGifts()
@@ -248,7 +254,8 @@ function connectTikTok() {
         });
     })
     .catch(err => {
-      setStatus({ connected: false, message: `Не удалось подключиться к @${username}: ${err.message}. Повтор через 30 с` });
+      failures++;
+      setStatus({ connected: false, message: `Не удалось подключиться к @${username}: ${err.message}. Повтор через ${inSec(retryDelay())}` });
       scheduleRetry();
     });
 }
