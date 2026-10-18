@@ -1,12 +1,13 @@
 {
   "name": "celebrity-game",
   "version": "1.0.0",
-  "description": "TikTok LIVE игра: каждый подарок = своё наказание по цене",
+  "description": "TikTok LIVE игры: Гонка Наций, Давид против Вишапа",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "test": "node --test",
-    "voices": "node scripts/make-voices.mjs"
+    "voices": "node scripts/make-voices.mjs",
+    "live": "node scripts/live.mjs"
   },
   "repository": {
     "type": "git",
