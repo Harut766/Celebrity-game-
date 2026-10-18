@@ -846,10 +846,10 @@
     "trackLength": 1000,
     "baseSpeed": 3.6,
     "speedWobble": 0.15,
-    "likesPerDash": 30,
-    "likeDash": 8,
+    "likesPerDash": 60,
+    "likeDash": 35,
     "followShieldSec": 20,
-    "shareDash": 15,
+    "shareDash": 60,
     "photoFinish": {
       "atProgress": 0.9,
       "gap": 25,
@@ -979,7 +979,7 @@
         "id": "nitro",
         "min": 1,
         "name": "Нитро",
-        "dash": 6,
+        "dash": 40,
         "gift": {
           "name": "Rose",
           "image": ""
@@ -989,7 +989,7 @@
         "id": "turbo",
         "min": 5,
         "name": "Турбо",
-        "dash": 30,
+        "dash": 110,
         "gift": {
           "name": "Finger Heart",
           "image": ""
@@ -1000,7 +1000,7 @@
         "min": 10,
         "name": "Щит",
         "shieldSec": 20,
-        "dash": 10,
+        "dash": 30,
         "gift": {
           "name": "Perfume",
           "image": ""
@@ -1010,9 +1010,9 @@
         "id": "rocket",
         "min": 30,
         "name": "Ракета",
-        "knockback": 70,
+        "knockback": 130,
         "stunSec": 1.2,
-        "dash": 15,
+        "dash": 40,
         "gift": {
           "name": "Doughnut",
           "image": ""
@@ -1022,10 +1022,10 @@
         "id": "super",
         "min": 100,
         "name": "Супер-атака",
-        "knockback": 90,
+        "knockback": 160,
         "stunSec": 1.2,
         "targets": 2,
-        "dash": 80,
+        "dash": 170,
         "gift": {
           "name": "Hand Heart",
           "image": ""
@@ -1036,7 +1036,7 @@
         "min": 500,
         "name": "Хаос",
         "spinSec": 5,
-        "dash": 60,
+        "dash": 130,
         "gift": {
           "name": "Money Gun",
           "image": ""
@@ -1046,7 +1046,7 @@
         "id": "legend",
         "min": 1000,
         "name": "Легенда",
-        "dash": 220,
+        "dash": 380,
         "cinematicSec": 6,
         "gift": {
           "name": "Galaxy",
@@ -1269,12 +1269,15 @@
         "oil"
       ],
       "spikes": {
-        "knockback": 80,
+        "knockback": 110,
         "stunSec": 1.5
       },
       "oil": {
         "spinSec": 2.2
       }
-    }
+    },
+    "likeDistance": 1.5,
+    "maxLikeDistance": 15,
+    "likeSpeedCap": 10
   }
 }

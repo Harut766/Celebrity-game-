@@ -323,6 +323,7 @@
     shake(fx.tier === 'super');
     banner(`<div class="big">${iconHtml('rocket')} ПОПАДАНИЕ!</div><div class="sub">${flagName(fx.target)} · ОТВЕТИТЕ?</div>`, { color: '#ff5a4a', ms: 1800, priority: 3 });
   };
+  H.likeBonus = fx => { trail(fx.country, 2, 'turbo'); card(fx.country, { name: 'ЛАЙКИ', avatar: '' }, 'РЫВОК КОМАНДЫ!', '#ff6a9a', 'nitro'); sound('turbo'); };
   H.likes = fx => { trail(fx.country, .9, 'nitro'); const r = carRect(fx.country); if (r) for (let i = 0; i < 6; i++) O({ type: 'heart', x: r.cx + rand(-r.w / 2, r.w / 2), y: r.y, vx: rand(-40, 40), vy: rand(-170, -90), life: 1, size: 40, drag: 0 }); sound('like'); };
   H.follow = fx => { card(fx.country, fx, 'ПОДПИСКА · ЩИТ', '#8fb4ff', 'shield'); sound('shield'); };
   H.share = fx => { card(fx.country, fx, 'РЕПОСТ · РЫВОК', '#9aff7a', 'nitro'); trail(fx.country, 1.2, 'nitro'); sound('nitro'); };

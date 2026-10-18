@@ -237,18 +237,29 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
   }
 
   // ---------- бесплатные действия ----------
+  // Каждый лайк сразу толкает машину; шкала команды копится до бонусного рывка
   function likes(ev, count) {
     const v = viewerOf(ev);
     const { country } = teamFor(v, { announce: false });
     const car = cars.get(country);
-    car.likeAcc += Math.max(1, count || 1);
+    const n = Math.max(1, count || 1);
+    const running = phase === 'running' && !paused;
+    // «Бюджет» лайков команды: не больше likeSpeedCap единиц в секунду, чтобы тапанье не обесценило подарки
+    const cap = S.likeSpeedCap ?? 10;
+    car.likeBudget = Math.min(cap * 2, (car.likeBudget ?? cap * 2) + (clock - (car.likeAt ?? clock)) * cap);
+    car.likeAt = clock;
+    const gain = Math.min(car.likeBudget, S.maxLikeDistance ?? 15, n * (S.likeDistance ?? 1.5));
+    if (running && gain > 0) { dash(country, gain); car.likeBudget -= gain; }
+    emit('race:fx', { kind: 'likes', country, count: n, name: v.name, avatar: v.avatar });
+    car.likeAcc += n;
     const need = Math.max(1, S.likesPerDash);
     while (car.likeAcc >= need) {
-      if (phase !== 'running' || paused) { car.likeAcc = need; break; }
+      if (!running) { car.likeAcc = need; break; }
       car.likeAcc -= need;
       dash(country, S.likeDash);
-      emit('race:fx', { kind: 'likes', country });
+      emit('race:fx', { kind: 'likeBonus', country });
     }
+    return country;
   }
   function follow(ev) {
     const v = viewerOf(ev);
@@ -272,15 +283,22 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
     if (t) { touchMember(v, t.country); emit('race:fx', { kind: 'arrive', country: t.country, name: v.name, avatar: v.avatar }); }
     else emit('race:fx', { kind: 'hello', name: v.name, avatar: v.avatar });
   }
+  // Код страны в чате: вступить в команду. Выбор запоминается на всю трансляцию,
+  // но сменить страну можно — не чаще раза в минуту (чтобы не прыгали туда-сюда).
+  const switchedAt = new Map();
   function chat(ev) {
     const v = viewerOf(ev);
     const { join: wanted, attack } = index.parseChat(ev.comment);
-    if (attack) { attackPref.set(v.key, { country: attack, until: clock + ATTACK_PREF_SEC }); return; }
-    if (!wanted) { const t = teams.get(v.key); if (t) touchMember(v, t.country); return; }
+    if (attack) { attackPref.set(v.key, { country: attack, until: clock + ATTACK_PREF_SEC }); return { attack }; }
     const t = teams.get(v.key);
-    if (t?.explicit) { touchMember(v, t.country); return; }  // выбор закреплён до конца эфира
+    if (!wanted) { if (t) touchMember(v, t.country); return {}; }
+    if (t?.country === wanted) { touchMember(v, wanted); emit('race:fx', { kind: 'join', country: wanted, name: v.name, avatar: v.avatar }); return { join: wanted, same: true }; }
+    if (t?.explicit && clock - (switchedAt.get(v.key) ?? -999) < 60) return { join: t.country, locked: true, wanted };
+    switchedAt.set(v.key, clock);
+    if (t) { const list = (members.get(t.country) || []).filter(m => m.key !== v.key); members.set(t.country, list); }
     assign(v, wanted, true);
     emit('race:fx', { kind: 'join', country: wanted, name: v.name, avatar: v.avatar });
+    return { join: wanted, from: t?.country };
   }
 
   // ---------- раунды ----------

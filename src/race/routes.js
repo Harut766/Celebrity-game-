@@ -80,12 +80,29 @@ export function mountRace({ app, broadcast, getConfig, isActive, isLive, localOn
       race.gift(g);
       console.log(`[гонка] ${g.user}${g.login && g.login !== g.user ? ` (@${g.login})` : ''}: ${g.giftName || 'подарок'} ${g.coins} мон. → ${tierFor(S.tiers, g.coins)?.name}${g.sim ? ' (тест)' : ''}`);
     },
-    likes: (p, count) => race.likes(p, count),
-    follow: p => race.follow(p),
-    share: p => race.share(p),
+    likes(p, count) {
+      const country = race.likes(p, count);
+      likeLog.set(country, (likeLog.get(country) || 0) + (count || 1));
+    },
+    follow: p => { race.follow(p); console.log(`[гонка] подписка: ${p.user}`); },
+    share: p => { race.share(p); console.log(`[гонка] репост: ${p.user}`); },
     join: p => race.join(p),
-    chat: p => race.chat(p),
+    chat(p) {
+      const r = race.chat(p);
+      const code = id => String(id || '').toUpperCase();
+      if (r.attack) console.log(`[гонка] ${p.user}: целится в ${code(r.attack)}`);
+      else if (r.locked) console.log(`[гонка] ${p.user} хочет за ${code(r.wanted)}, но только что выбрал ${code(r.join)} — сменить можно через минуту`);
+      else if (r.join) console.log(`[гонка] ${p.user} → команда ${code(r.join)}${r.same ? ' (уже в ней)' : r.from ? ` (был ${code(r.from)})` : ''}`);
+    },
   };
+
+  // Лайки в Терминал — сводкой раз в 30 секунд, по странам
+  const likeLog = new Map();
+  setInterval(() => {
+    if (!likeLog.size) return;
+    console.log(`[гонка] лайки за 30 с: ${[...likeLog].map(([c, n]) => `${String(c).toUpperCase()} ${n}`).join(', ')}`);
+    likeLog.clear();
+  }, 30_000);
 
   // ---------- страницы и панель ----------
   app.get('/race', (_req, res) => res.sendFile(join(publicDir, 'race/index.html')));

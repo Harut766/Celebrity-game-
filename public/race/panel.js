@@ -71,6 +71,10 @@
         hazard: { enabled: $('hazardOn').checked }, volume: { master: +$('volMaster').value, music: +$('volMusic').value }, tts: $('tts').checked,
       });
       b.textContent = '✓ Сохранено'; setTimeout(() => { b.textContent = '💾 Сохранить'; }, 1500);
+    } else if (b.id === 'resetSettings') {
+      if (!confirm('Вернуть длительность, уровни и громкость как в config.json?')) return;
+      await post('/api/race/settings', { resetAll: true });
+      formFilled = false;
     } else if (b.id === 'saveTiers') {
       const tiers = data.settings.tiers.map(t => {
         const row = document.querySelector(`#tiers tr[data-id="${t.id}"]`);

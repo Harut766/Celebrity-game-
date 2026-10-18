@@ -193,3 +193,22 @@ test('со щитом машина проезжает шипы и масло', (
     assert.equal(hit.blocked, true, kind);
   }
 });
+
+test('лайки сразу и заметно толкают машину команды', () => {
+  const { race, run, pos } = makeRace();
+  race.chat({ ...viewer('Nar'), comment: 'AM' });
+  for (let i = 0; i < 4; i++) { race.likes(viewer('Nar'), 15); run(1); }
+  assert.ok(pos('am') - pos('ru') > 60, `отрыв ${pos('am') - pos('ru')}`);
+});
+
+test('страну можно сменить (не чаще раза в минуту)', () => {
+  const { race, events, run } = makeRace();
+  race.chat({ ...viewer('Nar'), comment: 'ru' });
+  race.chat({ ...viewer('Nar'), comment: 'am' });
+  assert.equal(events.filter(e => e.kind === 'join').at(-1).country, 'ru', 'сразу сменить нельзя');
+  run(61);
+  race.chat({ ...viewer('Nar'), comment: 'am' });
+  assert.equal(events.filter(e => e.kind === 'join').at(-1).country, 'am');
+  race.likes(viewer('Nar'), 10);
+  assert.equal(events.filter(e => e.kind === 'likes').at(-1).country, 'am');
+});
