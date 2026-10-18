@@ -5,3 +5,4 @@ cloudflared
 cloudflared.tgz
 public/media/voice/auto/
 battle-state.json
+data/

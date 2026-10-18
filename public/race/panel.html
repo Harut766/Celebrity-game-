@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Панель стримера — Гонка Наций</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.4 -apple-system, 'Segoe UI', Arial, sans-serif; background: #10131f; color: #e8ebf5; }
+  header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; background: #181c2e; border-bottom: 1px solid #2a3050; position: sticky; top: 0; z-index: 2; }
+  header h1 { font-size: 20px; margin: 0; }
+  #conn { padding: 4px 12px; border-radius: 20px; background: #4a1e24; color: #ffb4b4; font-weight: 600; }
+  #conn.ok { background: #1e4a2a; color: #a8ffbf; }
+  #race { margin-left: auto; font-weight: 600; color: #ffd45a; }
+  main { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; padding: 16px; }
+  section { background: #181c2e; border: 1px solid #2a3050; border-radius: 14px; padding: 14px 16px; }
+  h2 { font-size: 16px; margin: 0 0 10px; color: #ffd45a; }
+  button { font: inherit; font-weight: 600; padding: 8px 14px; border-radius: 10px; border: 0; background: #3a4170; color: #fff; cursor: pointer; margin: 3px 3px 3px 0; }
+  button:hover { background: #4a5390; }
+  button.go { background: #2f7a45; } button.warn { background: #8a5a1a; } button.bad { background: #8a2a2a; }
+  input, select { font: inherit; padding: 7px 9px; border-radius: 8px; border: 1px solid #39406a; background: #0f1220; color: #fff; }
+  label { display: inline-flex; align-items: center; gap: 6px; margin: 4px 10px 4px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 5px 6px; border-bottom: 1px solid #262b45; text-align: left; vertical-align: middle; }
+  th { color: #9aa3cc; font-weight: 600; }
+  td input { width: 80px; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+  #log { max-height: 420px; overflow: auto; font-size: 14px; }
+  #log tr.sim td { color: #8890b8; }
+  .flag { width: 28px; height: 19px; border-radius: 3px; vertical-align: middle; }
+  .muted { color: #8890b8; font-size: 13px; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; background: #262b45; margin: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏁 Гонка Наций — панель</h1>
+  <span id="conn">TikTok: …</span>
+  <span id="race"></span>
+</header>
+<main>
+  <section>
+    <h2>Раунд</h2>
+    <div class="row">
+      <button class="go" data-act="start">▶ Старт</button>
+      <button class="warn" data-act="pause">⏸ Пауза / продолжить</button>
+      <button class="bad" data-act="reset">↺ Сбросить раунд</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label>Длительность, с <input id="roundSec" type="number" min="30" max="900" step="10"></label>
+      <label>Финал ×2, с <input id="finalSec" type="number" min="0" max="120"></label>
+      <label><input id="autoNext" type="checkbox"> следующий раунд сам</label>
+      <label><input id="dragonOn" type="checkbox"> 🐉 дракон</label>
+    </div>
+    <div class="row">
+      <label>Громкость <input id="volMaster" type="range" min="0" max="1" step=".05"></label>
+      <label>Музыка <input id="volMusic" type="range" min="0" max="1" step=".05"></label>
+      <label><input id="tts" type="checkbox"> озвучка «Спасибо, …»</label>
+      <button id="saveSettings">💾 Сохранить</button>
+    </div>
+    <p class="muted">Оверлей для LIVE Studio: адрес туннеля (или http://localhost:3000/). Эта панель в эфир не идёт и через туннель не открывается.</p>
+  </section>
+
+  <section>
+    <h2>Симулятор (без эфира)</h2>
+    <div class="row">
+      <label>Ник <input id="simUser" value="Nar" size="10"></label>
+      <label>Страна <select id="simCountry"><option value="">— нет (уйдёт последнему)</option></select></label>
+    </div>
+    <div class="row">
+      <label>Монеты <input id="simCoins" type="number" value="1" min="1" style="width:90px"></label>
+      <button data-sim="gift">🎁 Подарок</button>
+      <span id="quick"></span>
+    </div>
+    <div class="row">
+      <button data-sim="like">❤️ 30 лайков</button>
+      <button data-sim="follow">➕ Подписка</button>
+      <button data-sim="share">🔁 Репост</button>
+      <button data-sim="join">👋 Вход</button>
+    </div>
+    <div class="row">
+      <label>Коммент <input id="simText" value="🇦🇲" size="16"></label>
+      <button data-sim="chat">💬 Отправить</button>
+    </div>
+    <div class="row"><button class="warn" id="stress">🔥 Стресс-тест: 50 подарков за 10 с</button></div>
+    <p class="muted">Тестовые подарки помечаются «тест» и не идут в топ дня и победы.</p>
+  </section>
+
+  <section>
+    <h2>Уровни подарков</h2>
+    <table id="tiers"><thead><tr><th></th><th>Эффект</th><th>От монет</th><th>Сила</th></tr></thead><tbody></tbody></table>
+    <button id="saveTiers">💾 Сохранить уровни</button>
+    <p class="muted">«Сила» — рывок (рывки), откат (ракеты), секунды (щит, хаос, легенда).</p>
+  </section>
+
+  <section>
+    <h2>Страны и победы за день</h2>
+    <table id="countries"><tbody></tbody></table>
+    <button class="bad" data-act="resetDay">Обнулить статистику дня</button>
+  </section>
+
+  <section style="grid-column: 1 / -1">
+    <h2>Подарки (сохраняются в data/gifts-ДАТА.csv)</h2>
+    <div id="log"><table><thead><tr><th>Время</th><th>Ник</th><th>Подарок</th><th>Монеты</th><th>Страна</th><th>Эффект</th></tr></thead><tbody></tbody></table></div>
+  </section>
+</main>
+<script src="/race/art.js"></script>
+<script src="/race/panel.js"></script>
+</body>
+</html>
