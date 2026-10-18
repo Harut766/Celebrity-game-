@@ -1,102 +1,136 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
-body { font-family: 'SF Pro Display', 'Helvetica Neue', 'Arial Black', Arial, sans-serif; color: #fff; }
-
-/* Сцена всегда 1080×1920, масштабируется под окно */
-#stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; transform-origin: 0 0; background: #0b0e1a; }
+:root {
+  --font: 'Russo One', 'Arial Black', Arial, sans-serif;
+  /* Тёмная обводка ~4px + тень — текст читается на любом фоне */
+  --outline: -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 3px 3px 0 #000, 0 -4px 0 #000, 0 4px 0 #000, -4px 0 0 #000, 4px 0 0 #000, 0 7px 12px rgba(0,0,0,.75);
+  --plate: linear-gradient(180deg, rgba(18,22,44,.94), rgba(8,10,24,.94));
+}
+body { font-family: var(--font); color: #fff; }
+#stage { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; transform-origin: 0 0; background: #05060c; }
 #stage.shake { animation: shake .4s; }
 #stage.bigShake { animation: bigShake .8s; }
-@keyframes shake { 25% { transform: var(--fit) translate(-7px, 4px); } 50% { transform: var(--fit) translate(6px, -5px); } 75% { transform: var(--fit) translate(-4px, 2px); } }
-@keyframes bigShake { 10% { transform: var(--fit) translate(-18px, 10px); } 25% { transform: var(--fit) translate(16px, -12px); } 40% { transform: var(--fit) translate(-12px, 8px); } 60% { transform: var(--fit) translate(9px, -6px); } 80% { transform: var(--fit) translate(-5px, 3px); } }
-#game { position: absolute; inset: 0; width: 1080px; height: 1920px; }
-.flag { display: inline-block; vertical-align: -0.12em; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,.5); }
+@keyframes shake { 25% { transform: var(--fit) translate(-8px, 5px); } 50% { transform: var(--fit) translate(7px, -6px); } 75% { transform: var(--fit) translate(-4px, 3px); } }
+@keyframes bigShake { 10% { transform: var(--fit) translate(-20px, 12px); } 25% { transform: var(--fit) translate(18px, -14px); } 40% { transform: var(--fit) translate(-13px, 9px); } 60% { transform: var(--fit) translate(10px, -6px); } 80% { transform: var(--fit) translate(-5px, 3px); } }
+#scene3d, #fx2d { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+.flag { display: inline-block; vertical-align: middle; border-radius: 5px; box-shadow: 0 2px 6px rgba(0,0,0,.6); }
+.coin { width: .8em; height: .8em; vertical-align: -.06em; margin-left: .12em; }
+.ava { border-radius: 50%; object-fit: cover; flex: none; background: #334; }
+.ava.letter { display: inline-flex; align-items: center; justify-content: center; color: #fff; }
 
-/* ---------- Шапка: название, раунд, таймер (под плашкой ведущего TikTok) ---------- */
-#hud { position: absolute; left: 24px; right: 140px; top: 206px; height: 120px; display: flex; align-items: center; justify-content: space-between;
-  background: linear-gradient(180deg, rgba(20,24,48,.92), rgba(10,12,28,.92)); border: 3px solid rgba(255,214,90,.55); border-radius: 26px; padding: 0 22px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.5); }
-#title { display: flex; flex-direction: column; line-height: 1.05; }
-#titleText { font-size: 50px; font-weight: 900; letter-spacing: 2px; background: linear-gradient(180deg, #fff6c8, #ffc23a 60%, #ff8a1a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 0 #000); }
-#round { font-size: 26px; color: #cfd6ff; margin-top: 6px; font-weight: 700; }
-#timerBox { text-align: right; }
-#timer { font-size: 74px; font-weight: 900; font-variant-numeric: tabular-nums; text-shadow: 0 4px 0 #000, 0 0 20px rgba(255,255,255,.25); }
+/* ---------- Метки дорожек (слева, на тёмных плашках) ---------- */
+.lane { position: absolute; left: 0; width: 206px; display: grid; grid-template-columns: 70px 1fr; grid-template-rows: 64px 50px; align-items: center; padding: 6px 10px 12px 8px;
+  background: linear-gradient(90deg, rgba(6,8,20,.92) 70%, rgba(6,8,20,0)); }
+.lane .place { grid-row: 1 / 3; width: 62px; height: 62px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 44px;
+  background: #2a2f4a; border: 4px solid #fff; color: #fff; text-shadow: var(--outline); box-shadow: 0 4px 10px rgba(0,0,0,.6); }
+.lane .place.p1 { background: linear-gradient(180deg, #ffe27a, #e0a000); color: #3a2400; text-shadow: none; border-color: #fff6c8; width: 66px; height: 66px; font-size: 48px; box-shadow: 0 0 22px #ffc21a; }
+.lane .place.p2 { background: linear-gradient(180deg, #f2f4f8, #a8b0c0); color: #1a1f2a; text-shadow: none; }
+.lane .place.p3 { background: linear-gradient(180deg, #f2b07a, #b8692a); color: #2a1408; text-shadow: none; }
+.lane .lflag { width: 84px; height: 56px; border-radius: 6px; box-shadow: 0 3px 8px rgba(0,0,0,.7); border: 2px solid rgba(255,255,255,.7); }
+.lane .code { position: absolute; left: 182px; top: 18px; font-size: 40px; text-shadow: var(--outline); display: none; }
+.lane .cnt { display: flex; align-items: center; gap: 6px; font-size: 38px; text-shadow: var(--outline); }
+.lane .cnt svg { width: 34px; height: 34px; filter: drop-shadow(0 2px 2px #000); }
+.lane .likes { position: absolute; left: 10px; right: 26px; bottom: 6px; height: 9px; background: rgba(255,255,255,.18); border-radius: 5px; overflow: hidden; }
+.lane .likes i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ff4a7a, #ff9ab8); border-radius: 5px; transition: width .3s; }
+
+/* ---------- Шапка ---------- */
+#hud { position: absolute; left: 20px; right: 20px; top: 202px; height: 132px; display: flex; align-items: center; justify-content: space-between;
+  background: var(--plate); border: 3px solid rgba(255,210,90,.6); border-radius: 30px; padding: 0 24px; box-shadow: 0 12px 30px rgba(0,0,0,.6); }
+#hud .left { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; overflow: hidden; }
+#titleText { font-size: 52px; line-height: 1; letter-spacing: 1px; color: #ffd23a; text-shadow: var(--outline); }
+#hud .row2 { display: flex; align-items: center; gap: 14px; }
+#round { font-size: 36px; color: #dfe4ff; text-shadow: var(--outline); white-space: nowrap; }
+#top3 { display: flex; gap: 8px; }
+#top3 .chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.1); border-radius: 26px; padding: 2px 12px 2px 3px; font-size: 36px; text-shadow: var(--outline); }
+#top3 .chip .ava { width: 44px; height: 44px; border: 3px solid #ffd23a; font-size: 24px; }
+#top3 .chip.r2 .ava { border-color: #d8dde8; } #top3 .chip.r3 .ava { border-color: #e0a070; }
+#top3 .empty { font-size: 36px; color: #b8c0e8; text-shadow: var(--outline); white-space: nowrap; }
+#timerBox { text-align: right; flex: none; }
+#timer { font-size: 92px; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: var(--outline); }
 #timer.low { color: #ff5a4a; animation: pulse .5s ease-in-out infinite alternate; }
-#final { font-size: 30px; font-weight: 900; color: #1a0a00; background: linear-gradient(180deg, #fff27a, #ffb21a); border-radius: 12px; padding: 2px 14px; margin-top: -4px; animation: pulse .45s ease-in-out infinite alternate; box-shadow: 0 0 24px #ffb21a; }
+#final { font-size: 36px; color: #2a1200; background: linear-gradient(180deg, #fff27a, #ffb21a); border-radius: 14px; padding: 0 14px; margin-top: 4px; box-shadow: 0 0 26px #ffb21a; animation: pulse .45s ease-in-out infinite alternate; }
 @keyframes pulse { to { transform: scale(1.08); } }
 
 /* ---------- Комментатор ---------- */
-#say { position: absolute; left: 24px; right: 140px; top: 336px; height: 56px; display: flex; align-items: center; justify-content: center; gap: 10px;
-  font-size: 32px; font-weight: 800; text-shadow: 0 3px 0 #000; white-space: nowrap; overflow: hidden; }
-#say .line { display: inline-flex; align-items: center; gap: 10px; background: rgba(0,0,0,.55); border-radius: 28px; padding: 4px 22px; border: 2px solid rgba(255,255,255,.18); animation: sayIn .35s cubic-bezier(.2,1.4,.4,1); }
-#say .line.hint { color: #ffe9a0; border-color: rgba(255,214,90,.5); }
-@keyframes sayIn { from { transform: translateY(-20px) scale(.9); opacity: 0; } }
+#say { position: absolute; left: 20px; right: 20px; top: 336px; height: 52px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+#say .line { display: inline-flex; align-items: center; gap: 12px; font-size: 38px; line-height: 1; white-space: nowrap; text-shadow: var(--outline);
+  background: rgba(4,6,16,.9); border: 2px solid rgba(255,255,255,.25); border-radius: 28px; padding: 6px 26px; max-width: 1040px; overflow: hidden; animation: sayIn .35s cubic-bezier(.2,1.4,.4,1); }
+#say .line.hint { color: #ffe27a; border-color: rgba(255,210,90,.6); }
+@keyframes sayIn { from { transform: translateY(-16px) scale(.9); opacity: 0; } }
 
-/* ---------- Прайс: монеты → эффект ---------- */
-#prices { position: absolute; left: 16px; right: 120px; top: 1112px; height: 118px; margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; }
-#prices li { position: relative; background: linear-gradient(180deg, rgba(34,38,72,.95), rgba(14,16,34,.95)); border: 2px solid rgba(255,255,255,.18); border-radius: 18px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 2px; box-shadow: 0 6px 14px rgba(0,0,0,.45); }
-#prices li .ic { font-size: 34px; line-height: 1; height: 40px; display: flex; align-items: center; gap: 2px; }
-#prices li .ic img { width: 40px; height: 40px; object-fit: contain; }
-#prices li .nm { font-size: 19px; font-weight: 800; margin-top: 3px; text-align: center; line-height: 1; }
-#prices li .pr { font-size: 22px; font-weight: 900; color: #ffd45a; margin-top: 3px; }
-#prices li.hot { border-color: #ffd45a; box-shadow: 0 0 18px rgba(255,212,90,.6); }
+/* ---------- Прайс: 2 ряда (4 + 3) ---------- */
+#prices { position: absolute; left: 20px; width: 924px; top: 1196px; height: 188px; display: flex; flex-direction: column; gap: 8px; }
+#prices .row { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; height: 90px; }
+#prices .r1 { grid-template-columns: repeat(4, 1fr); }
+#prices .r2 { grid-template-columns: 1.45fr 1fr 1fr; }
+#prices li { position: relative; display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 6px; border-radius: 22px; background: var(--plate);
+  border: 3px solid var(--tc); box-shadow: 0 6px 14px rgba(0,0,0,.55), inset 0 0 22px color-mix(in srgb, var(--tc) 30%, transparent); }
+#prices .pic { position: relative; width: 76px; height: 76px; flex: none; }
+#prices .pic .gift { width: 76px; height: 76px; object-fit: contain; filter: drop-shadow(0 3px 4px rgba(0,0,0,.6)); }
+#prices .pic .badge { position: absolute; right: -8px; bottom: -6px; width: 42px; height: 42px; }
+#prices .txt { min-width: 0; display: flex; flex-direction: column; line-height: 1; gap: 6px; }
+#prices .nm { font-size: 36px; white-space: nowrap; text-shadow: var(--outline); letter-spacing: -.5px; }
+#prices .pr { font-size: 38px; color: #ffd23a; white-space: nowrap; text-shadow: var(--outline); }
 #prices li.pop { animation: cardPop .5s; }
-@keyframes cardPop { 40% { transform: scale(1.18); border-color: #fff; } }
+@keyframes cardPop { 40% { transform: scale(1.12); box-shadow: 0 0 40px var(--tc); } }
 
-/* ---------- Топы ---------- */
-#tops { position: absolute; left: 16px; right: 120px; top: 1238px; height: 104px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.top { background: rgba(10,12,28,.82); border: 2px solid rgba(255,255,255,.14); border-radius: 18px; padding: 4px 12px; overflow: hidden; }
-.top h3 { margin: 0; font-size: 20px; color: #ffd45a; }
-.top ol { margin: 0; padding: 0; list-style: none; }
-.top li { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 700; height: 25px; white-space: nowrap; }
-.top li .ava { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex: none; background: #445; }
-.top li .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-.top li .cn { color: #ffd45a; }
-.top li.empty { color: #8a90b0; font-weight: 600; }
+/* ---------- Как играть ---------- */
+#howto { position: absolute; left: 20px; width: 924px; top: 1400px; height: 160px; background: var(--plate); border: 3px solid rgba(120,200,255,.6); border-radius: 26px;
+  padding: 10px 18px 6px; display: flex; flex-direction: column; justify-content: space-around; box-shadow: 0 8px 20px rgba(0,0,0,.6); }
+#howto .tab { position: absolute; left: 22px; top: -26px; font-size: 36px; line-height: 1; color: #10121f; background: linear-gradient(180deg, #9ae0ff, #3aa8ff); padding: 6px 18px; border-radius: 14px; box-shadow: 0 4px 10px rgba(0,0,0,.6); }
+#howto .ln { display: flex; align-items: center; gap: 10px; font-size: 44px; line-height: 1; white-space: nowrap; text-shadow: var(--outline); letter-spacing: -.5px; }
+#howto .ln b { width: 46px; height: 46px; flex: none; border-radius: 50%; background: #3aa8ff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: normal; }
+#howto .cc { display: inline-flex; align-items: center; gap: 4px; margin-left: 2px; }
+#howto .cc .flag { width: 40px; height: 27px; }
 
-/* ---------- Подсказки (зона чата TikTok — не важное) ---------- */
-#hint { position: absolute; left: 24px; right: 140px; top: 1356px; text-align: center; font-size: 28px; font-weight: 800; color: #ffe9a0; text-shadow: 0 3px 0 #000; transition: opacity .4s; }
-
-/* ---------- Объявления ---------- */
-#banners { position: absolute; left: 0; right: 0; top: 560px; height: 380px; pointer-events: none; display: flex; align-items: center; justify-content: center; }
-.banner { position: absolute; text-align: center; padding: 18px 40px; border-radius: 34px; background: rgba(8,10,24,.86); border: 4px solid var(--bc, #ffd45a);
-  box-shadow: 0 0 40px var(--bc, #ffd45a), 0 20px 40px rgba(0,0,0,.6); animation: bannerIn .45s cubic-bezier(.2,1.5,.4,1); max-width: 1000px; }
+/* ---------- Объявления по центру трассы ---------- */
+#banners { position: absolute; left: 0; right: 0; top: 520px; height: 520px; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.banner { position: absolute; text-align: center; padding: 20px 40px 24px; border-radius: 38px; background: rgba(6,8,22,.93); border: 5px solid var(--bc, #ffd23a);
+  box-shadow: 0 0 46px var(--bc, #ffd23a), 0 22px 44px rgba(0,0,0,.7); animation: bannerIn .45s cubic-bezier(.2,1.5,.4,1); max-width: 1040px; }
 .banner.out { animation: bannerOut .35s ease-in forwards; }
-.banner .big { font-size: 64px; font-weight: 900; line-height: 1.05; text-shadow: 0 5px 0 #000; display: flex; align-items: center; justify-content: center; gap: 16px; white-space: nowrap; }
-.banner .sub { font-size: 34px; font-weight: 800; color: var(--bc, #ffd45a); margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 12px; white-space: nowrap; }
-.banner .ava { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid var(--bc, #ffd45a); background: #334; }
-.banner .gift { width: 60px; height: 60px; object-fit: contain; }
-@keyframes bannerIn { from { transform: scale(2.2); opacity: 0; } }
+.banner .big { font-size: 76px; line-height: 1.1; text-shadow: var(--outline); display: flex; align-items: center; justify-content: center; gap: 18px; white-space: nowrap; }
+.banner .sub { font-size: 48px; line-height: 1.15; color: var(--bc, #ffd23a); text-shadow: var(--outline); margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 14px; white-space: nowrap; }
+.banner .ava { width: 96px; height: 96px; border: 5px solid var(--bc, #ffd23a); font-size: 50px; }
+.banner .tic { width: 84px; height: 84px; }
+.banner .flag { width: 96px; height: 64px; }
+.banner .sub .flag { width: 66px; height: 44px; }
+.banner .gift { width: 80px; height: 80px; object-fit: contain; }
+@keyframes bannerIn { from { transform: scale(2); opacity: 0; } }
 @keyframes bannerOut { to { transform: scale(.7); opacity: 0; } }
 
-/* ---------- Отсчёт ---------- */
-#countdown { position: absolute; left: 0; right: 0; top: 600px; text-align: center; font-size: 240px; font-weight: 900; color: #fff; text-shadow: 0 10px 0 #000, 0 0 60px #ffb21a; }
-#countdown.go { color: #7aff5a; font-size: 180px; }
-#countdown .num { display: inline-block; animation: count 1s ease-out; }
-@keyframes count { from { transform: scale(2.4); opacity: 0; } 30% { transform: scale(1); opacity: 1; } }
+/* ---------- Светофор F1 ---------- */
+#lights { position: absolute; left: 0; right: 0; top: 560px; text-align: center; }
+#lights .gantry { display: inline-flex; gap: 26px; padding: 26px 34px; background: linear-gradient(180deg, #1a1c24, #050608); border: 5px solid #3a3d48; border-radius: 34px; box-shadow: 0 20px 40px rgba(0,0,0,.8); }
+#lights i { width: 130px; height: 130px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #3a1214, #12080a 70%); border: 5px solid #000; box-shadow: inset 0 0 20px #000; transition: background .1s; }
+#lights i.red { background: radial-gradient(circle at 40% 35%, #ff9a8a, #ff1a1a 45%, #8a0000); box-shadow: 0 0 50px #ff2a2a, 0 0 100px rgba(255,40,40,.6); }
+#lights i.green { background: radial-gradient(circle at 40% 35%, #c8ffb8, #2aff3a 45%, #0a8a10); box-shadow: 0 0 50px #2aff3a, 0 0 100px rgba(60,255,60,.6); }
+#lights .cap { margin-top: 18px; font-size: 72px; text-shadow: var(--outline); }
+#lights.go .cap { color: #6aff5a; font-size: 110px; animation: bannerIn .4s cubic-bezier(.2,1.5,.4,1); }
 
-/* ---------- Легенда: кино на весь экран ---------- */
+/* ---------- Легенда ---------- */
 #legend { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
-  background: radial-gradient(circle at 50% 45%, rgba(70,36,0,.82), rgba(0,0,0,.96) 70%); }
-#legend .rays { position: absolute; left: 50%; top: 42%; width: 2200px; height: 2200px; margin: -1100px 0 0 -1100px;
-  background: repeating-conic-gradient(rgba(255,210,90,.22) 0 8deg, transparent 8deg 16deg); animation: spin 10s linear infinite; border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, rgba(70,36,0,.85), rgba(0,0,0,.96) 70%); }
+#legend .rays { position: absolute; left: 50%; top: 42%; width: 2200px; height: 2200px; margin: -1100px 0 0 -1100px; border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255,210,90,.24) 0 8deg, transparent 8deg 16deg); animation: spin 10s linear infinite;
   -webkit-mask: radial-gradient(circle, #000 15%, transparent 60%); mask: radial-gradient(circle, #000 15%, transparent 60%); }
 @keyframes spin { to { transform: rotate(360deg); } }
-#legend .tag { position: relative; font-size: 46px; font-weight: 900; letter-spacing: 12px; color: #ffd45a; text-shadow: 0 0 20px #ff9a1a; animation: legendIn .7s cubic-bezier(.2,1.4,.4,1) both; }
-#legend .ava { position: relative; width: 380px; height: 380px; border-radius: 50%; border: 12px solid #ffd45a; box-shadow: 0 0 0 8px #7a4a00, 0 0 80px #ffb21a;
-  object-fit: cover; margin: 26px 0; background: #553; animation: legendIn .8s .15s cubic-bezier(.2,1.4,.4,1) both; display: flex; align-items: center; justify-content: center; font-size: 170px; font-weight: 900; }
-#legend .nm { position: relative; font-size: 92px; font-weight: 900; text-shadow: 0 8px 0 #000, 0 0 40px #ffb21a; max-width: 1040px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; animation: legendIn .8s .3s cubic-bezier(.2,1.4,.4,1) both; }
-#legend .what { position: relative; font-size: 46px; font-weight: 800; margin-top: 14px; display: flex; align-items: center; gap: 16px; animation: legendIn .8s .45s both; }
-#legend .what img.gift { width: 80px; height: 80px; object-fit: contain; }
+#legend .tag { position: relative; display: flex; align-items: center; gap: 18px; font-size: 80px; letter-spacing: 8px; color: #ffd23a; text-shadow: var(--outline); animation: legendIn .7s cubic-bezier(.2,1.4,.4,1) both; }
+#legend .tag img { width: 100px; height: 100px; }
+#legend .ava { position: relative; width: 400px; height: 400px; border: 14px solid #ffd23a; box-shadow: 0 0 0 8px #7a4a00, 0 0 90px #ffb21a; margin: 28px 0; font-size: 180px; animation: legendIn .8s .15s cubic-bezier(.2,1.4,.4,1) both; }
+#legend .nm { position: relative; font-size: 100px; text-shadow: var(--outline); max-width: 1040px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; animation: legendIn .8s .3s cubic-bezier(.2,1.4,.4,1) both; }
+#legend .what { position: relative; font-size: 60px; margin-top: 16px; display: flex; align-items: center; gap: 18px; text-shadow: var(--outline); animation: legendIn .8s .45s both; }
+#legend .what .gift { width: 100px; height: 100px; object-fit: contain; }
+#legend .what .flag { width: 96px; height: 64px; }
 @keyframes legendIn { from { transform: scale(3); opacity: 0; } }
 
-/* ---------- Победитель ---------- */
-#winner { position: absolute; left: 0; right: 0; top: 430px; text-align: center; }
-#winner .card { display: inline-block; padding: 30px 56px 36px; border-radius: 44px; background: rgba(6,8,20,.9); border: 5px solid #ffd45a; box-shadow: 0 0 60px rgba(255,212,90,.6); animation: bannerIn .6s cubic-bezier(.2,1.4,.4,1); }
-#winner .flagBig { width: 300px; height: 200px; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
-#winner .t1 { font-size: 104px; font-weight: 900; color: #ffd45a; text-shadow: 0 7px 0 #000; margin-top: 12px; }
-#winner .t2 { font-size: 56px; font-weight: 900; }
-#winner .hero { margin-top: 22px; font-size: 36px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 14px; }
-#winner .hero img, #winner .hero .ava { width: 84px; height: 84px; border-radius: 50%; border: 4px solid #ffd45a; object-fit: cover; background: #445; display: flex; align-items: center; justify-content: center; font-size: 40px; }
-#winner .wins { margin-top: 14px; font-size: 28px; color: #cfd6ff; display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; }
+/* ---------- Победа ---------- */
+#winner { position: absolute; left: 0; right: 0; top: 440px; text-align: center; }
+#winner .card { display: inline-block; padding: 30px 60px 36px; border-radius: 46px; background: rgba(6,8,20,.94); border: 6px solid #ffd23a; box-shadow: 0 0 70px rgba(255,210,90,.6); animation: bannerIn .6s cubic-bezier(.2,1.4,.4,1); }
+#winner .flagBig { width: 330px; height: 220px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.7); }
+#winner .t1 { font-size: 120px; line-height: 1.1; color: #ffd23a; text-shadow: var(--outline); margin-top: 14px; }
+#winner .t2 { font-size: 72px; text-shadow: var(--outline); }
+#winner .hero { margin-top: 24px; font-size: 48px; display: flex; align-items: center; justify-content: center; gap: 16px; text-shadow: var(--outline); }
+#winner .hero .lbl { font-size: 40px; color: #ffd23a; }
+#winner .hero .ava { width: 96px; height: 96px; border: 5px solid #ffd23a; font-size: 48px; }
+#winner .wins { margin-top: 16px; font-size: 40px; color: #dfe4ff; text-shadow: var(--outline); display: flex; gap: 14px; justify-content: center; align-items: center; flex-wrap: wrap; }

@@ -1,6 +1,7 @@
 // «Гонка Наций» на сервере: настройки, тик симуляции, рассылка на экран, панель стримера и симулятор.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import express from 'express';
 import { createRace } from './engine.js';
 import { createStore } from './store.js';
 import { tierFor, sortedTiers } from './tiers.js';
@@ -9,7 +10,7 @@ const TICK_MS = 50;      // физика 20 раз в секунду
 const STATE_EVERY = 2;   // состояние на экран 10 раз в секунду
 
 // Что можно менять из панели (остальное — в config.json)
-const EDITABLE = ['roundSec', 'finalSec', 'finalMultiplier', 'autoNextRound', 'baseSpeed', 'likesPerDash', 'tts', 'volume', 'dragon', 'tiers', 'photoFinish'];
+const EDITABLE = ['roundSec', 'finalSec', 'finalMultiplier', 'autoNextRound', 'baseSpeed', 'likesPerDash', 'tts', 'volume', 'hazard', 'tiers', 'photoFinish'];
 
 function merge(base, over) {
   const out = { ...base };
@@ -65,8 +66,11 @@ export function mountRace({ app, broadcast, getConfig, isActive, isLive, localOn
   function learnIcon(g) {
     if (!g.giftImage || g.sim) return;
     const tier = tierFor(S.tiers, g.coins);
-    if (!tier || icons[tier.id]?.image === g.giftImage) return;
+    const byName = (g.giftName || '').toLowerCase();
+    if (!tier || (icons[tier.id]?.image === g.giftImage && (!byName || icons['@' + byName] === g.giftImage))) return;
     icons[tier.id] = { image: g.giftImage, name: g.giftName || '', coins: g.coins };
+    // Картинка по названию — для плитки прайса с подарком из конфига (например, «Rose»)
+    if (byName) icons['@' + byName] = g.giftImage;
     try { writeFileSync(iconsFile, JSON.stringify(icons)); } catch {}
     broadcast({ type: 'race:view', data: view() });
   }
@@ -85,11 +89,13 @@ export function mountRace({ app, broadcast, getConfig, isActive, isLive, localOn
 
   // ---------- страницы и панель ----------
   app.get('/race', (_req, res) => res.sendFile(join(publicDir, 'race/index.html')));
+  // Three.js для 3D-трассы (из node_modules, работает без интернета)
+  app.use('/race/vendor/three', express.static(join(publicDir, '..', 'node_modules', 'three')));
   app.get('/panel', localOnly, (_req, res) => res.sendFile(join(publicDir, 'race/panel.html')));
   app.get('/api/race/view', (_req, res) => res.json(view()));
   app.get('/api/race/panel', localOnly, (_req, res) => res.json({
     settings: S, overrides, snapshot: race.snapshot(), people: race.people(), gifts: store.recentGifts(),
-    teams: race.teamsCount(), pending: race.pendingCount(), active: isActive(),
+    teams: race.teamsCount(), pending: race.pendingCount(), active: isActive(), fps: Date.now() - fpsAt < 10000 ? fps : 0,
   }));
   app.post('/api/race/control', localOnly, (req, res) => {
     const a = req.body?.action;
@@ -141,5 +147,9 @@ export function mountRace({ app, broadcast, getConfig, isActive, isLive, localOn
     res.json({ ok: true, total });
   });
 
-  return { handlers, race, store };
+  // Оверлей раз в 2 секунды сообщает, сколько кадров в секунду он рисует
+  let fps = 0, fpsAt = 0;
+  const setFps = v => { fps = Math.round(Number(v) || 0); fpsAt = Date.now(); };
+
+  return { handlers, race, store, setFps };
 }

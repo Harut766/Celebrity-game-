@@ -121,6 +121,7 @@ wss.on('connection', ws => {
     try {
       const msg = JSON.parse(raw);
       if (msg.type === 'log' && typeof msg.text === 'string') console.log(`[оверлей] ${msg.text.slice(0, 300)}`);
+      if (msg.type === 'fps') RACE.setFps(msg.fps);
     } catch {}
   });
 });

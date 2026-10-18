@@ -37,6 +37,7 @@
   <h1>🏁 Гонка Наций — панель</h1>
   <span id="conn">TikTok: …</span>
   <span id="race"></span>
+  <span id="fps" class="pill"></span>
 </header>
 <main>
   <section>
@@ -50,7 +51,7 @@
       <label>Длительность, с <input id="roundSec" type="number" min="30" max="900" step="10"></label>
       <label>Финал ×2, с <input id="finalSec" type="number" min="0" max="120"></label>
       <label><input id="autoNext" type="checkbox"> следующий раунд сам</label>
-      <label><input id="dragonOn" type="checkbox"> 🐉 дракон</label>
+      <label><input id="hazardOn" type="checkbox"> ⚠️ шипы и масло</label>
     </div>
     <div class="row">
       <label>Громкость <input id="volMaster" type="range" min="0" max="1" step=".05"></label>
@@ -105,6 +106,7 @@
   </section>
 </main>
 <script src="/race/art.js"></script>
+<script src="/race/icons.js"></script>
 <script src="/race/panel.js"></script>
 </body>
 </html>

@@ -40,7 +40,7 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
   let leader = null;
   let lastGiftAt = 0;
   let marks = {};
-  let dragon = { state: 'idle', t: 0, next: 0, target: null };
+  let hazard = { state: 'idle', t: 0, next: 0 };
   const talk = { last: -99, lastText: '', pending: null };
   let peopleDirty = true;
 
@@ -68,7 +68,7 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
     syncCountries();
   }
   refresh();
-  dragon.next = rand(...S.dragon.everySec);
+  hazard.next = rand(...S.hazard.everySec);
 
   // ---------- комментатор: не чаще раза в 4–5 с, без одинаковых фраз подряд ----------
   function say(kind, vars = {}, priority = 1) {
@@ -183,7 +183,7 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
     const tier = tierFor(S.tiers, coins);
     if (!tier) return;
     const p = tierPower(tier, coins);
-    const fx = { kind: tier.id, tier: tier.id, title: tier.name, icon: tier.icon, country, name: v.name, avatar: v.avatar, coins, giftImage: item.giftImage, final };
+    const fx = { kind: tier.id, tier: tier.id, title: tier.name, country, name: v.name, avatar: v.avatar, coins, giftImage: item.giftImage, final };
     const slot = BIG_SLOTS[tier.id];
     if (slot !== undefined) {
       bigQueue.push({ item, run: () => runBig(tier, p, fx, v.key), sec: slot ?? (tier.cinematicSec || 6) + .6 });
@@ -295,7 +295,7 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
     phase = 'countdown'; phaseT = 0; elapsed = 0;
     final = false; slowmo = { left: 0, used: false }; marks = {};
     roundDonors.clear();
-    dragon = { state: 'idle', t: 0, next: rand(...S.dragon.everySec), target: null };
+    hazard = { state: 'idle', t: 0, next: rand(...S.hazard.everySec) };
     leader = null;
     peopleDirty = true;
     emit('race:round', { round });
@@ -392,31 +392,41 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
       say('photo', { a: first, b: second }, 8);
     }
 
-    stepDragon(dt, left);
+    stepHazard(dt, left);
 
     if (c1.pos >= L()) finishRound(first);
     else if (left <= 0) finishRound(first);
   }
 
-  // Вишап: раз в 30–45 с прилетает к лидеру и сжигает его, если нет щита
-  function stepDragon(dt, left) {
-    if (!S.dragon.enabled) return;
-    dragon.t += dt;
-    if (dragon.state === 'idle' && dragon.t >= dragon.next && left > S.dragon.warnSec + 6 && slowmo.left <= 0) {
-      dragon = { state: 'warn', t: 0, next: 0, target: null };
-      emit('race:fx', { kind: 'dragonWarn', sec: S.dragon.warnSec, target: ranking[0] });
-      say('dragonWarn', {}, 4);
-    } else if (dragon.state === 'warn' && dragon.t >= S.dragon.warnSec) {
+  // Шипы или масло: раз в 30–45 с появляются на дорожке лидера. За 3 с — предупреждение.
+  // Без щита: шипы пробивают колесо (машина теряет дистанцию), на масле машину заносит. Со щитом — проезжает.
+  function stepHazard(dt, left) {
+    const H = S.hazard;
+    if (!H?.enabled) return;
+    hazard.t += dt;
+    if (hazard.state === 'idle' && hazard.t >= hazard.next && left > H.warnSec + 6 && slowmo.left <= 0) {
       const target = ranking[0];
-      dragon = { state: 'fly', t: 0, next: 0, target };
-      emit('race:fx', { kind: 'dragonFly', target });
-      later(1.2, () => {
-        const ok = knock(target, S.dragon.knockback, S.dragon.stunSec);
-        emit('race:fx', { kind: 'dragonStrike', target, blocked: !ok });
-        say(ok ? 'dragonHit' : 'dragonBlocked', { a: target }, 4);
-      });
-    } else if (dragon.state === 'fly' && dragon.t >= 3) {
-      dragon = { state: 'idle', t: 0, next: rand(...S.dragon.everySec), target: null };
+      const kind = H.kinds[Math.floor(random() * H.kinds.length)];
+      hazard = { state: 'warn', t: 0, target, kind };
+      emit('race:fx', { kind: 'hazardWarn', hazard: kind, target, sec: H.warnSec });
+      say(kind === 'oil' ? 'oilWarn' : 'spikesWarn', { a: target }, 4);
+    } else if (hazard.state === 'warn' && hazard.t >= H.warnSec) {
+      const car = cars.get(hazard.target);
+      hazard = { ...hazard, state: 'on', t: 0, pos: Math.min(L() - 15, car.pos + H.ahead) };
+      emit('race:fx', { kind: 'hazardPlace', hazard: hazard.kind, target: hazard.target, pos: hazard.pos });
+    } else if (hazard.state === 'on') {
+      const car = cars.get(hazard.target);
+      if (car && car.pos >= hazard.pos) {
+        let blocked = car.shield > 0;
+        if (!blocked && hazard.kind === 'oil') { car.spin = Math.max(car.spin, H.oil.spinSec); car.boost = 0; }
+        else if (!blocked) blocked = !knock(car.id, H.spikes.knockback, H.spikes.stunSec);
+        emit('race:fx', { kind: 'hazardHit', hazard: hazard.kind, target: car.id, blocked });
+        say(blocked ? 'hazardBlocked' : hazard.kind === 'oil' ? 'oilHit' : 'spikesHit', { a: car.id }, 4);
+        hazard = { state: 'idle', t: 0, next: rand(...H.everySec) };
+      } else if (hazard.t > 12) {
+        emit('race:fx', { kind: 'hazardClear', target: hazard.target });
+        hazard = { state: 'idle', t: 0, next: rand(...H.everySec) };
+      }
     }
   }
 
@@ -434,6 +444,7 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
         stun: c.stun > 0, spin: c.spin > 0, back: c.back > 0, like: Math.min(1, c.likeAcc / Math.max(1, S.likesPerDash)),
       })),
       ranking,
+      hazard: hazard.state === 'idle' ? null : { state: hazard.state, kind: hazard.kind, target: hazard.target, pos: hazard.pos ?? null },
     };
   }
   function people() {

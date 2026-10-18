@@ -51,7 +51,7 @@ test('уровни по монетам', () => {
 
 function makeRace(patch = {}) {
   const events = [];
-  const S = { ...R, speedWobble: 0, dragon: { ...R.dragon, enabled: false }, countdownSec: 0, ...patch };
+  const S = { ...R, speedWobble: 0, hazard: { ...R.hazard, enabled: false }, countdownSec: 0, ...patch };
   const race = createRace({ getSettings: () => S, emit: (type, data) => events.push({ type, ...data }), random: () => .5 });
   race.tick(.05); // старт
   const run = sec => { for (let t = 0; t < sec; t += .05) race.tick(.05); };
@@ -165,4 +165,31 @@ test('ник со стоп-словом не попадает в топы и к�
   race.gift({ ...viewer('война_навсегда'), coins: 500 });
   assert.equal(race.people().topRound.length, 0);
   assert.deepEqual(race.people().captains, {});
+});
+
+test('шипы на дорожке лидера: без щита машина теряет дистанцию', () => {
+  const H = { ...R.hazard, enabled: true, everySec: [1, 1], warnSec: 1, ahead: 10, kinds: ['spikes'] };
+  const { race, events, run } = makeRace({ hazard: H });
+  race.chat({ ...viewer('Nar'), comment: 'am' });
+  race.gift({ ...viewer('Nar'), coins: 9 });
+  run(1.2);
+  assert.equal(events.find(e => e.kind === 'hazardWarn').target, 'am');
+  run(4);
+  const hit = events.find(e => e.kind === 'hazardHit');
+  assert.equal(hit.target, 'am');
+  assert.equal(hit.blocked, false);
+});
+
+test('со щитом машина проезжает шипы и масло', () => {
+  for (const kind of ['spikes', 'oil']) {
+    const H = { ...R.hazard, enabled: true, everySec: [1, 1], warnSec: 1, ahead: 10, kinds: [kind] };
+    const { race, events, run } = makeRace({ hazard: H });
+    race.chat({ ...viewer('Nar'), comment: 'am' });
+    race.gift({ ...viewer('Nar'), coins: 10 });
+    race.gift({ ...viewer('Nar'), coins: 9 });
+    run(5);
+    const hit = events.find(e => e.kind === 'hazardHit');
+    assert.equal(hit.target, 'am');
+    assert.equal(hit.blocked, true, kind);
+  }
 });

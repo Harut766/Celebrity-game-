@@ -3,6 +3,7 @@
   const $ = id => document.getElementById(id);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }).then(r => r.json());
+  const ic = id => `<img src="${window.RaceIcons.tierUrl(id)}" width="22" height="22" style="vertical-align:middle" alt="">`;
   const flag = id => `<img class="flag" src="${window.RaceArt.flagUrl(id, 28, 19)}" alt="">`;
   const POWER = { nitro: 'dash', turbo: 'dash', shield: 'shieldSec', rocket: 'knockback', super: 'knockback', chaos: 'spinSec', legend: 'dash' };
   let data = null, formFilled = false;
@@ -12,6 +13,7 @@
     const s = data.settings, snap = data.snapshot;
     const phase = { countdown: 'отсчёт', running: 'гонка', finished: 'финиш' }[snap.phase] || snap.phase;
     $('race').textContent = `Раунд ${snap.round} · ${phase}${snap.paused ? ' (пауза)' : ''} · ${Math.ceil(snap.timeLeft)} с · игроков ${data.teams}${data.pending ? ` · ждут старта: ${data.pending}` : ''}${data.active ? '' : ' · ⚠ в config.json не выбрана игра race'}`;
+    $('fps').textContent = data.fps ? `оверлей: ${data.fps} кадр/с${data.fps < 50 ? ' — слабо!' : ''}` : 'оверлей не открыт';
     if (!formFilled) fillForm(s);
     renderCountries(s, data.people);
     renderLog(data.gifts);
@@ -27,11 +29,11 @@
   function fillForm(s) {
     formFilled = true;
     $('roundSec').value = s.roundSec; $('finalSec').value = s.finalSec;
-    $('autoNext').checked = s.autoNextRound !== false; $('dragonOn').checked = s.dragon?.enabled !== false;
+    $('autoNext').checked = s.autoNextRound !== false; $('hazardOn').checked = s.hazard?.enabled !== false;
     $('volMaster').value = s.volume?.master ?? .9; $('volMusic').value = s.volume?.music ?? .35; $('tts').checked = !!s.tts;
     $('simCountry').innerHTML = '<option value="">— нет (уйдёт последнему)</option>' + s.countries.map(c => `<option value="${c.id}">${c.flag} ${esc(c.name)}</option>`).join('');
-    $('quick').innerHTML = s.tiers.map(t => `<button data-coins="${t.min}">${t.icon} ${t.min}</button>`).join('');
-    $('tiers').querySelector('tbody').innerHTML = s.tiers.map(t => `<tr data-id="${t.id}"><td>${t.icon}</td><td>${esc(t.name)}</td>
+    $('quick').innerHTML = s.tiers.map(t => `<button data-coins="${t.min}">${ic(t.id)} ${t.min}</button>`).join('');
+    $('tiers').querySelector('tbody').innerHTML = s.tiers.map(t => `<tr data-id="${t.id}"><td>${ic(t.id)}</td><td>${esc(t.name)}</td>
       <td><input type="number" min="1" data-k="min" value="${t.min}"></td><td><input type="number" min="1" data-k="${POWER[t.id] || 'dash'}" value="${t[POWER[t.id] || 'dash'] ?? ''}"></td></tr>`).join('');
   }
 
@@ -66,7 +68,7 @@
     } else if (b.id === 'saveSettings') {
       await post('/api/race/settings', {
         roundSec: +$('roundSec').value, finalSec: +$('finalSec').value, autoNextRound: $('autoNext').checked,
-        dragon: { enabled: $('dragonOn').checked }, volume: { master: +$('volMaster').value, music: +$('volMusic').value }, tts: $('tts').checked,
+        hazard: { enabled: $('hazardOn').checked }, volume: { master: +$('volMaster').value, music: +$('volMusic').value }, tts: $('tts').checked,
       });
       b.textContent = '✓ Сохранено'; setTimeout(() => { b.textContent = '💾 Сохранить'; }, 1500);
     } else if (b.id === 'saveTiers') {

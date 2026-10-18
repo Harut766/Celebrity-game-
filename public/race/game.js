@@ -1,55 +1,50 @@
-// «Гонка Наций» — экран для TikTok LIVE. Гонку считает сервер, здесь только картинка и звук.
+// «Гонка Наций» — экран для TikTok LIVE. Гонку считает сервер; здесь сеть, HUD и 2D-слой эффектов.
+// 3D-трассу и машины рисует scene3d.js (Three.js).
 (function () {
   const $ = id => document.getElementById(id);
-  const { drawFlag, flagUrl, carSprite, drawWheel, CAR } = window.RaceArt;
+  const { drawFlag, flagUrl } = window.RaceArt;
+  const I = window.RaceIcons;
   const W = 1080, H = 1920, TAU = Math.PI * 2;
-  const stage = $('stage'), canvas = $('game'), ctx = canvas.getContext('2d');
+  const stage = $('stage'), canvas = $('fx2d'), ctx = canvas.getContext('2d');
   const rand = (a, b) => a + Math.random() * (b - a);
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const ease = { out: t => 1 - (1 - t) ** 3, inOut: t => t < .5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2 };
+  const FONT = '"Russo One", "Arial Black", Arial, sans-serif';
 
-  // ---------- геометрия: всё важное в середине (сверху плашка ведущего, снизу чат TikTok) ----------
-  const LANE_TOP = 404, LANE_H = 116, LABEL_W = 184, START_X = 196, FINISH_X = 932;
+  // ---------- компоновка 1080×1920 ----------
+  // 0–200 полоса TikTok (ник, зрители) — только декор; 200–335 шапка; 338–386 комментатор;
+  // 390–1188 трасса (6 × 133); 1196–1384 прайс; 1392–1560 «как играть»; ниже — зона чата (декор).
+  const LANE_TOP = 390, LANE_H = 133, LABEL_W = 206, START_X = 222, FINISH_X = 900;
   const laneY = i => LANE_TOP + i * LANE_H;
   const laneMid = i => laneY(i) + LANE_H / 2;
 
-  let view = null;          // настройки с сервера (страны, уровни, громкость…)
-  let state = null;         // последнее состояние гонки
-  let stateAt = 0;
+  let view = null, state = null;
   let people = { captains: {}, members: {}, counts: {}, topRound: [], topDay: [], wins: {} };
   const countries = () => view?.countries || [];
   const countryById = id => countries().find(c => c.id === id);
   const laneOf = id => countries().findIndex(c => c.id === id);
 
   // ---------- масштаб под окно ----------
-  let fitScale = 1;
   function fit() {
-    fitScale = Math.min(innerWidth / W, innerHeight / H);
-    stage.style.setProperty('--fit', `translate(${(innerWidth - W * fitScale) / 2}px, ${(innerHeight - H * fitScale) / 2}px) scale(${fitScale})`);
+    const s = Math.min(innerWidth / W, innerHeight / H);
+    stage.style.setProperty('--fit', `translate(${(innerWidth - W * s) / 2}px, ${(innerHeight - H * s) / 2}px) scale(${s})`);
     stage.style.transform = 'var(--fit)';
   }
   addEventListener('resize', fit);
   fit();
 
-  // ---------- картинки ----------
-  const sprites = new Map();
-  const sprite = c => { if (!sprites.has(c.id)) sprites.set(c.id, carSprite(c)); return sprites.get(c.id); };
+  // ---------- аватарки ----------
   const avatars = new Map();
   function avatarImg(url) {
     if (!url) return null;
-    if (!avatars.has(url)) {
-      const img = new Image();
-      img.referrerPolicy = 'no-referrer';
-      img.src = url;
-      avatars.set(url, img);
-    }
+    if (!avatars.has(url)) { const img = new Image(); img.referrerPolicy = 'no-referrer'; img.src = url; avatars.set(url, img); }
     const img = avatars.get(url);
     return img.complete && img.naturalWidth ? img : null;
   }
-  const letterColor = name => `hsl(${[...String(name || '?')].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 11)} 55% 45%)`;
+  const letterColor = name => `hsl(${[...String(name || '?')].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 11)} 55% 42%)`;
   function drawAvatar(p, x, y, r, ring = '#fff', ringW = 3) {
     ctx.save();
     ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.closePath();
@@ -58,73 +53,27 @@
     if (img) ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
     else {
       ctx.fillStyle = letterColor(p?.name); ctx.fillRect(x - r, y - r, r * 2, r * 2);
-      ctx.fillStyle = '#fff'; ctx.font = `900 ${Math.round(r * 1.1)}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText([...(p?.name || '?')][0]?.toUpperCase() || '?', x, y + 1);
+      ctx.fillStyle = '#fff'; ctx.font = `${Math.round(r * 1.05)}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText([...(p?.name || '?')][0]?.toUpperCase() || '?', x, y + 2);
     }
     ctx.restore();
     ctx.lineWidth = ringW; ctx.strokeStyle = ring; ctx.stroke();
     ctx.restore();
   }
-  const flagImg = (id, w = 44, h = 30) => `<img class="flag" src="${flagUrl(id, w, h)}" width="${w}" height="${h}" alt="">`;
+  const flagImg = (id, w = 54, h = 36) => `<img class="flag" src="${flagUrl(id, w, h)}" width="${w}" height="${h}" alt="">`;
   const avaHtml = (p, cls = 'ava') => p?.avatar
     ? `<img class="${cls}" src="${esc(p.avatar)}" referrerpolicy="no-referrer" alt="">`
-    : `<span class="${cls}" style="background:${letterColor(p?.name)};display:inline-flex;align-items:center;justify-content:center;font-weight:900">${esc([...(p?.name || '?')][0]?.toUpperCase() || '?')}</span>`;
+    : `<span class="${cls} letter" style="background:${letterColor(p?.name)}">${esc([...(p?.name || '?')][0]?.toUpperCase() || '?')}</span>`;
+  const iconHtml = (tier, cls = 'tic') => `<img class="${cls}" src="${I.tierUrl(tier)}" alt="">`;
+  const COIN = '<svg class="coin" viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" fill="#ffc21a" stroke="#8a5a00" stroke-width="3"/><circle cx="20" cy="20" r="11" fill="none" stroke="#fff3b0" stroke-width="3"/></svg>';
   const fmt = n => Math.round(n).toLocaleString('ru-RU');
 
-  // ---------- фон трассы (рисуется один раз) ----------
-  let bg = null;
-  function buildBackground() {
-    const n = countries().length;
-    bg = document.createElement('canvas'); bg.width = W; bg.height = H;
-    const g = bg.getContext('2d');
-    const sky = g.createLinearGradient(0, 0, 0, H);
-    sky.addColorStop(0, '#05060f'); sky.addColorStop(.2, '#141a3a'); sky.addColorStop(.55, '#0c0f22'); sky.addColorStop(1, '#05060c');
-    g.fillStyle = sky; g.fillRect(0, 0, W, H);
-    // прожекторы стадиона
-    for (const x of [140, 540, 940]) {
-      const l = g.createRadialGradient(x, 380, 10, x, 380, 420);
-      l.addColorStop(0, 'rgba(160,190,255,.22)'); l.addColorStop(1, 'rgba(160,190,255,0)');
-      g.fillStyle = l; g.fillRect(x - 420, 0, 840, 900);
-    }
-    const top = LANE_TOP - 8, bottom = laneY(n) + 8;
-    // бортики
-    g.fillStyle = '#1b1f33'; g.fillRect(0, top - 14, W, bottom - top + 28);
-    for (let x = 0; x < W; x += 40) { g.fillStyle = (x / 40) % 2 ? '#d22' : '#eee'; g.fillRect(x, top - 14, 40, 8); g.fillRect(x, bottom + 6, 40, 8); }
-    // асфальт с зерном
-    for (let i = 0; i < n; i++) {
-      const y = laneY(i);
-      const a = g.createLinearGradient(0, y, 0, y + LANE_H);
-      a.addColorStop(0, i % 2 ? '#2a2d36' : '#2f323c'); a.addColorStop(1, i % 2 ? '#23262e' : '#272a33');
-      g.fillStyle = a; g.fillRect(0, y, W, LANE_H);
-    }
-    for (let i = 0; i < 9000; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * .05})`; g.fillRect(Math.random() * W, top + Math.random() * (bottom - top), 2, 2); }
-    // разметка
-    g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 3; g.setLineDash([34, 26]);
-    for (let i = 1; i < n; i++) { g.beginPath(); g.moveTo(START_X, laneY(i)); g.lineTo(W, laneY(i)); g.stroke(); }
-    g.setLineDash([]);
-    // боксы с флагами
-    const pit = g.createLinearGradient(0, 0, LABEL_W, 0);
-    pit.addColorStop(0, '#0d1022'); pit.addColorStop(1, '#171b33');
-    g.fillStyle = pit; g.fillRect(0, top, LABEL_W, bottom - top);
-    g.fillStyle = 'rgba(255,255,255,.12)'; for (let i = 1; i < n; i++) g.fillRect(0, laneY(i) - 1, LABEL_W, 2);
-    // старт
-    g.fillStyle = '#fff'; g.fillRect(START_X - 3, top, 6, bottom - top);
-    // финиш — шашечки
-    const sq = 14;
-    for (let y = top; y < bottom; y += sq) for (let k = 0; k < 2; k++) { g.fillStyle = ((y - top) / sq + k) % 2 ? '#111' : '#fff'; g.fillRect(FINISH_X + k * sq, y, sq, sq); }
-    g.fillStyle = 'rgba(255,214,90,.9)'; g.font = '900 22px Arial'; g.save(); g.translate(FINISH_X + 48, (top + bottom) / 2); g.rotate(-Math.PI / 2); g.textAlign = 'center'; g.fillText('ФИНИШ', 0, 8); g.restore();
-  }
-
   // ---------- машины: плавное движение между пакетами с сервера ----------
-  const cars = new Map(); // id → { disp, target, vel, t, wheel, … }
-  function carX(pos) {
-    const len = state?.length || 1000;
-    return START_X + CAR.w * .9 + clamp(pos / len, 0, 1.02) * (FINISH_X - START_X - CAR.w * .9);
-  }
+  const cars = new Map();
   function syncCars(now) {
     for (const c of state.cars) {
       let car = cars.get(c.id);
-      if (!car) { car = { id: c.id, disp: c.pos, wheel: 0, glow: 0, lastPlace: 9 }; cars.set(c.id, car); }
+      if (!car) { car = { id: c.id, disp: c.pos, speed: 0 }; cars.set(c.id, car); }
       if (Math.abs(c.pos - car.disp) > 300) car.disp = c.pos;
       Object.assign(car, { target: c.pos, vel: c.vel, t: now, shield: c.shield, stun: c.stun, spin: c.spin, back: c.back, like: c.like });
     }
@@ -135,138 +84,100 @@
       const prev = car.disp;
       car.disp += (pred - car.disp) * Math.min(1, dt * 10);
       car.speed = (car.disp - prev) / Math.max(dt, .001);
-      car.wheel += (car.disp - prev) * .18;
     }
   }
+  const carRect = id => window.Race3D?.carRect(id) || null;
 
-  // Где сейчас машина страны (для эффектов)
-  function carRect(id) {
-    const car = cars.get(id), lane = laneOf(id);
-    if (!car || lane < 0) return null;
-    const front = carX(car.disp);
-    return { x: front - CAR.w, y: laneMid(lane) - CAR.h / 2 + 2, front, mid: laneMid(lane), w: CAR.w, h: CAR.h, car };
-  }
-
-  function drawCar(c, car, now) {
-    const lane = laneOf(c.id);
-    const front = carX(car.disp);
-    const x = front - CAR.w, y = laneMid(lane) - CAR.h / 2 + 2;
-    const t = now / 1000;
-    ctx.save();
-    // тряска при ударе, вращение при «хаосе»
-    let rot = 0, dy = 0;
-    if (car.spin) rot = Math.sin(t * 18) * .35;
-    else if (car.stun || car.back) { rot = Math.sin(t * 40) * .06; dy = Math.sin(t * 50) * 2; }
-    else dy = Math.sin(t * 9 + lane) * .8;
-    ctx.translate(x + CAR.w / 2, y + CAR.h / 2 + dy);
-    ctx.rotate(rot);
-    ctx.translate(-CAR.w / 2, -CAR.h / 2);
-    // антенна с флагом на крыше
-    ctx.strokeStyle = '#222'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(30, 28); ctx.lineTo(24, -6); ctx.stroke();
-    const wave = Math.sin(t * 8 + lane) * 3;
-    ctx.save(); ctx.translate(24, -8); ctx.transform(1, wave * .02, 0, 1, 0, 0);
-    drawFlag(ctx, c.id, -40, -2, 40, 26, { radius: 3, wave: Math.sin(t * 6) });
-    ctx.restore();
-    ctx.drawImage(sprite(c), 0, 0, CAR.w, CAR.h);
-    for (const wx of CAR.wheels) drawWheel(ctx, wx, CAR.wheelY, CAR.wheelR, car.wheel);
-    // капитан за рулём (топ-донатер страны в этом раунде)
-    const cap = people.captains?.[c.id];
-    if (cap) {
-      drawAvatar(cap, CAR.cockpit.x + 8, CAR.cockpit.y + 2, 21, '#ffd45a', 4);
-      drawCrown(CAR.cockpit.x + 8, CAR.cockpit.y - 24, 13);
-    }
-    ctx.restore();
-    return { x, y, front };
-  }
-  function drawCrown(x, y, s) {
-    ctx.save(); ctx.translate(x, y);
-    ctx.fillStyle = '#ffd45a'; ctx.strokeStyle = '#7a4a00'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(-s, s * .6); ctx.lineTo(-s, -s * .3); ctx.lineTo(-s * .5, s * .1); ctx.lineTo(0, -s * .6); ctx.lineTo(s * .5, s * .1); ctx.lineTo(s, -s * .3); ctx.lineTo(s, s * .6); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-    ctx.restore();
-  }
-
-  function drawLaneLabel(c, place, car) {
-    const i = laneOf(c.id), y = laneY(i);
-    drawFlag(ctx, c.id, 14, y + 14, 72, 48, { radius: 6 });
-    // место
-    const colors = ['#ffd45a', '#d8dde8', '#e0a070'];
-    ctx.fillStyle = colors[place] || 'rgba(255,255,255,.14)';
-    ctx.beginPath(); ctx.arc(130, y + 38, 26, 0, TAU); ctx.fill();
-    ctx.fillStyle = place < 3 ? '#1a1206' : '#fff'; ctx.font = '900 32px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(String(place + 1), 130, y + 40);
-    // код страны и сколько в команде
-    ctx.fillStyle = '#fff'; ctx.font = '900 22px Arial'; ctx.textAlign = 'left';
-    ctx.fillText(c.id.toUpperCase(), 16, y + 84);
-    ctx.fillStyle = '#b8c0e8'; ctx.font = '800 20px Arial';
-    ctx.fillText(`👥${people.counts?.[c.id] || 0}`, 64, y + 84);
-    // шкала лайков
-    const bw = LABEL_W - 28, by = y + LANE_H - 14;
-    ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.fillRect(14, by, bw, 7);
-    ctx.fillStyle = c.colors?.[c.colors.length > 2 ? 2 : 1] || '#ff4a6a'; ctx.fillRect(14, by, bw * (car?.like || 0), 7);
-  }
-
-  // Аватарки команды бегут за машиной
-  function drawMembers(c, pos) {
-    const list = people.members?.[c.id] || [];
-    const y = laneMid(laneOf(c.id)) + 6;
-    list.slice(0, 4).forEach((m, k) => {
-      const x = pos.x - 22 - k * 30;
-      if (x < START_X + 12) return;
-      ctx.globalAlpha = 1 - k * .18;
-      drawAvatar(m, x, y + Math.sin(performance.now() / 160 + k) * 3, 14, 'rgba(255,255,255,.8)', 2);
+  // ---------- метки дорожек: флаг, место, игроки, шкала лайков ----------
+  const laneEls = [];
+  function buildLanes() {
+    const box = $('lanes');
+    box.innerHTML = '';
+    laneEls.length = 0;
+    countries().forEach((c, i) => {
+      const el = document.createElement('div');
+      el.className = 'lane';
+      el.style.top = laneY(i) + 'px';
+      el.style.height = LANE_H + 'px';
+      el.innerHTML = `<div class="place">${i + 1}</div><img class="lflag" src="${flagUrl(c.id, 84, 56)}" alt="">
+        <div class="code">${esc(c.id.toUpperCase())}</div><div class="cnt"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.5" fill="#fff"/><path d="M3 22c0-5 4-8 9-8s9 3 9 8z" fill="#fff"/></svg><span>0</span></div>
+        <div class="likes"><i></i></div>`;
+      box.appendChild(el);
+      laneEls.push({ id: c.id, el, place: el.querySelector('.place'), cnt: el.querySelector('.cnt span'), like: el.querySelector('.likes i'), last: {} });
     });
-    ctx.globalAlpha = 1;
+  }
+  function renderLanes() {
+    const ranking = [...cars.values()].sort((a, b) => b.disp - a.disp).map(c => c.id);
+    for (const l of laneEls) {
+      const place = ranking.indexOf(l.id) + 1, cnt = people.counts?.[l.id] || 0, like = Math.round((cars.get(l.id)?.like || 0) * 100);
+      if (l.last.place !== place) { l.place.textContent = place || ''; l.place.className = `place p${place}`; l.last.place = place; }
+      if (l.last.cnt !== cnt) { l.cnt.textContent = cnt; l.last.cnt = cnt; }
+      if (l.last.like !== like) { l.like.style.width = like + '%'; l.last.like = like; }
+    }
   }
 
-  // ---------- шапка, топы, прайс ----------
+  // ---------- шапка, топ-3, прайс ----------
   const timerText = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+  let hudKey = '';
   function renderHud() {
     if (!state) return;
-    $('timer').textContent = state.phase === 'finished' ? '0:00' : timerText(Math.ceil(state.timeLeft));
+    const timer = state.phase === 'finished' ? '0:00' : timerText(Math.ceil(state.timeLeft));
+    const key = [timer, state.final, state.phase, state.paused, state.round].join('|');
+    if (key === hudKey) return;
+    hudKey = key;
+    $('timer').textContent = timer;
     $('timer').classList.toggle('low', state.phase === 'running' && state.timeLeft <= 10);
     $('final').hidden = !(state.final && state.phase === 'running');
-    const wins = Object.entries(people.wins || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    $('round').innerHTML = `Раунд ${state.round}` + (wins.length ? ` · побед: ${wins.map(([id, n]) => `${flagImg(id, 30, 20)} ${n}`).join(' ')}` : '') + (state.paused ? ' · ⏸ пауза' : '');
+    $('round').textContent = `РАУНД ${state.round}${state.paused ? ' · ПАУЗА' : ''}`;
   }
   let topsKey = '';
   function renderTops() {
-    const key = JSON.stringify([people.topRound, people.topDay]);
+    const key = JSON.stringify(people.topRound);
     if (key === topsKey) return;
     topsKey = key;
-    const rows = list => list.length
-      ? list.map((d, i) => `<li>${['🥇', '🥈', '🥉'][i]} ${avaHtml(d)} ${d.country ? flagImg(d.country, 24, 16) : ''}<span class="nm">${esc(d.name)}</span><span class="cn">${fmt(d.coins)}🪙</span></li>`).join('')
-      : '<li class="empty">Будь первым!</li>';
-    $('topRound').querySelector('ol').innerHTML = rows(people.topRound || []);
-    $('topDay').querySelector('ol').innerHTML = rows(people.topDay || []);
+    const list = people.topRound || [];
+    $('top3').innerHTML = list.length
+      ? list.map((d, i) => `<span class="chip r${i + 1}">${avaHtml(d)}<b>${fmt(d.coins)}</b>${COIN}</span>`).join('')
+      : '<span class="empty">Топ: будь первым!</span>';
+  }
+  function giftPicture(t) {
+    const name = (t.gift?.name || '').toLowerCase();
+    return t.gift?.image || view.icons?.['@' + name] || I.giftUrl(name);
   }
   function renderPrices() {
     const tiers = view?.tiers || [];
-    $('prices').innerHTML = tiers.map((t, i) => {
-      const icon = view.icons?.[t.id]?.image;
-      const price = i < tiers.length - 1 && tiers[i + 1].min - 1 > t.min ? `${t.min}+` : `${t.min}`;
-      return `<li data-tier="${esc(t.id)}" class="${t.min >= 500 ? 'hot' : ''}"><div class="ic">${icon ? `<img src="${esc(icon)}" referrerpolicy="no-referrer" alt="">` : ''}${esc(t.icon)}</div>
-        <div class="nm">${esc(t.name)}</div><div class="pr">${price}🪙</div></li>`;
-    }).join('');
+    const tile = t => `<li data-tier="${esc(t.id)}" style="--tc:${I.tierColor(t.id)}">
+        <div class="pic"><img class="gift" src="${esc(giftPicture(t))}" referrerpolicy="no-referrer" alt="">${iconHtml(t.id, 'badge')}</div>
+        <div class="txt"><div class="nm">${esc(t.name.toUpperCase())}</div><div class="pr">${fmt(t.min)}${t.min < 1000 ? '+' : ''}${COIN}</div></div></li>`;
+    $('prices').innerHTML = `<ul class="row r1">${tiers.slice(0, 4).map(tile).join('')}</ul><ul class="row r2">${tiers.slice(4).map(tile).join('')}</ul>`;
+  }
+  function renderHowto() {
+    const chips = countries().map(c => `<span class="cc">${flagImg(c.id, 46, 31)}${esc(c.id.toUpperCase())}</span>`).join('');
+    $('howto').innerHTML = `<div class="tab">КАК ИГРАТЬ</div>
+      <div class="ln"><b>1</b><span>В чат:</span>${chips}</div>
+      <div class="ln"><b>2</b><span>Лайки толкают твою машину</span></div>
+      <div class="ln"><b>3</b><span>Подарки: нитро, щиты, ракеты</span></div>`;
   }
 
-  // ---------- объявления ----------
-  // Текст фраз — только шаблоны из конфига; {a}/{b} — флаг и название страны, {n} — ник (уже проверенный сервером)
+  // ---------- строка комментатора ----------
   function fillVars(text, vars = {}) {
     return esc(text).replace(/\{(a|b|n)\}/g, (_, k) => {
       if (k === 'n') return esc(vars.n || '');
       const c = countryById(vars[k]);
-      return c ? `${flagImg(c.id, 40, 27)} ${esc(c.name)}` : '';
+      return c ? `${flagImg(c.id, 48, 32)} ${esc(c.name)}` : '';
     });
   }
+  // Длинная фраза ужимается, но не мельче 36px
   function sayLine(html, cls = '') {
     $('say').innerHTML = `<span class="line ${cls}">${html}</span>`;
+    const el = $('say').firstChild;
+    for (let size = 38; size > 36 && el.scrollWidth > el.clientWidth; size--) el.style.fontSize = size - 1 + 'px';
+    if (el.scrollWidth > el.clientWidth) el.style.letterSpacing = '-1px';
   }
 
-  // ---------- камера ----------
+  // ---------- камера (фотофиниш) ----------
   const camera = {
-    zoom: 1, x: W / 2, y: 750, target: null,
+    zoom: 1, x: W / 2, y: H / 2, target: null,
     set({ zoom, x, y, sec }) { this.target = { zoom, x, y, until: performance.now() + sec * 1000 }; },
     update(dt, now) {
       const t = this.target && now < this.target.until ? this.target : { zoom: 1, x: this.x, y: this.y };
@@ -276,46 +187,46 @@
     },
   };
 
-  // ---------- эффекты (fx.js) ----------
-  const hooks = { under: [], over: [] };
-  const fxHandlers = {};
-  function onFx(fx) { (fxHandlers[fx.kind] || (() => {}))(fx); }
-
-  // ---------- отсчёт и победа ----------
-  let lastCount = -1;
-  function renderCountdown() {
-    const el = $('countdown');
-    if (state.phase !== 'countdown' || state.paused) { if (!el.hidden && state.phase !== 'countdown') el.hidden = true; lastCount = -1; return; }
+  // ---------- светофор как в F1 ----------
+  function renderLights() {
+    const el = $('lights');
+    if (state.phase !== 'countdown') { if (!el.classList.contains('go')) el.hidden = true; return; }
     const n = Math.ceil(state.countdown);
-    if (n === lastCount || n <= 0) return;
-    lastCount = n;
-    el.hidden = false; el.className = '';
-    el.innerHTML = `<span class="num">${n}</span>`;
-    try { window.RaceAudio.play('count'); } catch {}
+    const red = clamp(6 - n, 0, 3);
+    if (el.hidden || el.dataset.red !== String(red)) {
+      if (!el.hidden && red > Number(el.dataset.red || 0)) try { window.RaceAudio.play('count'); } catch {}
+      el.hidden = false; el.className = ''; el.dataset.red = red;
+      el.innerHTML = `<div class="gantry">${[0, 1, 2, 3].map(i => `<i class="${i < red ? 'red' : ''}"></i>`).join('')}</div><div class="cap">${red < 3 ? 'ПРИГОТОВИЛИСЬ' : 'ВНИМАНИЕ'}</div>`;
+    }
   }
   function showGo() {
-    const el = $('countdown');
-    el.hidden = false; el.className = 'go';
-    el.innerHTML = '<span class="num">СТАРТ!</span>';
+    const el = $('lights');
+    el.hidden = false; el.className = 'go'; el.dataset.red = '';
+    el.innerHTML = `<div class="gantry">${'<i class="green"></i>'.repeat(4)}</div><div class="cap">СТАРТ!</div>`;
     try { window.RaceAudio.play('go'); } catch {}
-    setTimeout(() => { el.hidden = true; }, 1100);
+    setTimeout(() => { el.hidden = true; el.className = ''; }, 1300);
   }
+
+  // ---------- победа ----------
   function showWinner(f) {
     const c = countryById(f.winner);
     if (!c) return;
     const hero = f.hero;
     const wins = Object.entries(f.wins || {}).sort((a, b) => b[1] - a[1]);
-    $('winner').innerHTML = `<div class="card"><img class="flagBig" src="${flagUrl(c.id, 300, 200)}" alt="">
+    $('winner').innerHTML = `<div class="card"><img class="flagBig" src="${flagUrl(c.id, 330, 220)}" alt="">
       <div class="t1">ПОБЕДА!</div><div class="t2">${esc(c.name)}</div>
-      ${hero ? `<div class="hero">Герой раунда: ${avaHtml(hero)} <b>${esc(hero.name)}</b> · ${fmt(hero.coins)}🪙</div>` : ''}
-      ${wins.length ? `<div class="wins">Побед за день: ${wins.map(([id, n]) => `${flagImg(id, 36, 24)} ${n}`).join(' ')}</div>` : ''}</div>`;
+      ${hero ? `<div class="hero"><span class="lbl">Герой раунда</span>${avaHtml(hero)}<b>${esc(hero.name)}</b><span>${fmt(hero.coins)}${COIN}</span></div>` : ''}
+      ${wins.length ? `<div class="wins">Побед за день: ${wins.map(([id, n]) => `${flagImg(id, 54, 36)} ${n}`).join(' ')}</div>` : ''}</div>`;
     $('winner').hidden = false;
-    sayLine(`🏁 Победа: ${flagImg(c.id, 40, 27)} ${esc(c.name)}!`);
+    sayLine(`Победа: ${flagImg(c.id, 48, 32)} ${esc(c.name)}!`);
     window.RaceDrama?.finish(f);
   }
 
   // ---------- главный цикл ----------
-  let lastT = performance.now();
+  const hooks = { under: [], over: [] };
+  const fxHandlers = {};
+  function onFx(fx) { (fxHandlers[fx.kind] || (() => {}))(fx); }
+  let lastT = performance.now(), fps = { n: 0, t: performance.now(), value: 60 };
   function frame(now) {
     try { step(now); } catch (e) { report(`ошибка в кадре: ${e.message}`); }
     requestAnimationFrame(frame);
@@ -323,78 +234,53 @@
   function step(now) {
     const dt = Math.min(.05, (now - lastT) / 1000);
     lastT = now;
+    fps.n++;
+    if (now - fps.t > 2000) { fps.value = Math.round(fps.n * 1000 / (now - fps.t)); fps.n = 0; fps.t = now; if (ws?.readyState === 1) ws.send(JSON.stringify({ type: 'fps', fps: fps.value })); }
     if (!view || !state) return;
-    if (!bg) buildBackground();
     updateCars(dt, now);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    camera.update(dt, now);
+    window.Race3D?.update(dt, now);
     ctx.clearRect(0, 0, W, H);
-    // Камера: на фотофинише приближает финиш
-    const cam = camera.update(dt, now);
-    if (cam.zoom > 1.001) ctx.setTransform(cam.zoom, 0, 0, cam.zoom, cam.x * (1 - cam.zoom), cam.y * (1 - cam.zoom));
-    ctx.drawImage(bg, 0, 0);
-    const ranking = [...cars.values()].sort((a, b) => b.disp - a.disp).map(c => c.id);
-    // подсветка дорожки лидера
-    if (state.phase !== 'countdown' && ranking[0]) {
-      const i = laneOf(ranking[0]);
-      const glow = ctx.createLinearGradient(START_X, 0, FINISH_X, 0);
-      const col = countryById(ranking[0])?.colors?.[0] || '#fff';
-      glow.addColorStop(0, 'rgba(255,214,90,0)'); glow.addColorStop(1, hexA(col === '#FFFFFF' ? '#ffd45a' : col, .22));
-      ctx.fillStyle = glow; ctx.fillRect(START_X, laneY(i) + 2, FINISH_X - START_X, LANE_H - 4);
-    }
     hooks.under.forEach(h => h(ctx, dt, now));
-    const positions = {};
-    for (const c of countries()) {
-      const car = cars.get(c.id);
-      if (!car) continue;
-      drawLaneLabel(c, ranking.indexOf(c.id), car);
-      positions[c.id] = drawCar(c, car, now);
-      drawMembers(c, positions[c.id]);
-    }
     hooks.over.forEach(h => h(ctx, dt, now));
-    // Финал ×2: трасса пульсирует оранжевым
-    if (state.final && state.phase === 'running') {
-      ctx.save();
-      ctx.globalAlpha = .45 + .35 * Math.sin(now / 160);
-      ctx.strokeStyle = '#ffb21a'; ctx.lineWidth = 8; ctx.shadowColor = '#ff8a1a'; ctx.shadowBlur = 24;
-      ctx.strokeRect(4, LANE_TOP - 4, W - 8, laneY(countries().length) - LANE_TOP + 8);
-      ctx.restore();
-    }
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    if (cam.zoom > 1.001) {
-      const v = ctx.createRadialGradient(W / 2, 750, 200, W / 2, 750, 900);
-      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${(cam.zoom - 1) * .9})`);
+    if (camera.zoom > 1.01) {
+      const v = ctx.createRadialGradient(W / 2, 790, 220, W / 2, 790, 900);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${(camera.zoom - 1) * .8})`);
       ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
     }
+    renderLanes();
     renderHud();
-    renderCountdown();
+    renderLights();
   }
-  const hexA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
 
   // ---------- связь с сервером ----------
   let ws = null, lastMsgAt = Date.now();
   const unsent = [], reported = new Set();
-  function report(text) {
-    if (reported.has(text)) return;
-    reported.add(text); unsent.push(text); flush();
-  }
+  function report(text) { if (reported.has(text)) return; reported.add(text); unsent.push(text); flush(); }
   function flush() { while (unsent.length && ws?.readyState === 1) ws.send(JSON.stringify({ type: 'log', text: unsent.shift() })); }
   addEventListener('error', e => report(`ошибка: ${e.message} (${String(e.filename).split('/').pop()}:${e.lineno})`));
 
+  function applyView(d) {
+    const countriesChanged = JSON.stringify(view?.countries) !== JSON.stringify(d.countries);
+    view = d;
+    if (countriesChanged) { buildLanes(); renderHowto(); }
+    renderPrices();
+    try { window.RaceAudio.setVolume(d.volume); } catch {}
+  }
   function onMessage(msg) {
     const d = msg.data;
     switch (msg.type) {
       case 'race:state': {
         const prevPhase = state?.phase;
-        state = d; stateAt = performance.now();
-        syncCars(stateAt);
+        state = d;
+        syncCars(performance.now());
         if (prevPhase === 'countdown' && d.phase === 'running') showGo();
         if (prevPhase === 'finished' && d.phase !== 'finished') $('winner').hidden = true;
-        // Музыка: идёт во время гонки, в финале быстрее, в последние 10 секунд — ещё плотнее
         try { window.RaceAudio.music(d.phase === 'running' && !d.paused, d.final ? (d.timeLeft <= 10 ? 2 : 1) : 0); } catch {}
         break;
       }
       case 'race:people': people = d; renderTops(); break;
-      case 'race:view': view = d; bg = null; sprites.clear(); renderPrices(); try { window.RaceAudio.setVolume(d.volume); } catch {} break;
+      case 'race:view': applyView(d); break;
       case 'race:fx': onFx(d); break;
       case 'race:say': sayLine(fillVars(d.text, d.vars)); break;
       case 'race:finish': showWinner(d); break;
@@ -411,13 +297,21 @@
   // Туннель иногда рвёт соединение молча: сервер пишет 10 раз в секунду — 5 секунд тишины = переподключение
   setInterval(() => { if (ws && ws.readyState !== WebSocket.CLOSED && Date.now() - lastMsgAt > 5000) reconnect(); }, 2000);
 
+  window.Race = {
+    fxHandlers, onFx, hooks, camera, carRect, avatarImg, drawFlag, sayLine, fillVars, ctx, cars, countryById, laneOf, laneMid, laneY,
+    drawAvatar, avaHtml, flagImg, iconHtml, esc, fmt, rand, pick, clamp, sleep, ease, report, FONT, COIN,
+    get view() { return view; }, get state() { return state; }, get people() { return people; },
+    stage, W, H, LANE_H, LANE_TOP, START_X, FINISH_X, LABEL_W,
+  };
+
   (async function init() {
-    try { view = await (await fetch('/api/race/view')).json(); } catch {}
-    if (view) { renderPrices(); try { window.RaceAudio.setVolume(view.volume); } catch {} }
+    try { applyView(await (await fetch('/api/race/view')).json()); } catch {}
     connect();
     requestAnimationFrame(frame);
+    // Шрифт Russo One загружен — перерисовать надписи на текстурах 3D-сцены
+    document.fonts?.load(`48px ${FONT}`).then(() => {
+      const go = () => window.Race3D?.onFonts();
+      if (window.Race3D) go(); else addEventListener('race3d', go, { once: true });
+    });
   })();
-
-  window.Race = { fxHandlers, onFx, hooks, camera, carRect, avatarImg, drawFlag, CAR, LANE_TOP, sayLine, fillVars, ctx, cars, countryById, laneOf, laneMid, laneY, carX, drawAvatar, avaHtml, flagImg, esc, fmt, rand, pick, clamp, sleep, ease, hexA, report,
-    get view() { return view; }, get state() { return state; }, get people() { return people; }, stage, W, H, LANE_H, START_X, FINISH_X };
 })();
