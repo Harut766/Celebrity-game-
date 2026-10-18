@@ -31,7 +31,7 @@
     $('roundSec').value = s.roundSec; $('finalSec').value = s.finalSec;
     $('autoNext').checked = s.autoNextRound !== false; $('hazardOn').checked = s.hazard?.enabled !== false;
     $('volMaster').value = s.volume?.master ?? .9; $('volMusic').value = s.volume?.music ?? .35; $('tts').checked = !!s.tts;
-    $('simCountry').innerHTML = '<option value="">— нет (уйдёт последнему)</option>' + s.countries.map(c => `<option value="${c.id}">${c.flag} ${esc(c.name)}</option>`).join('');
+    $('simCountry').innerHTML = '<option value="">— нет (лайки попросят выбрать страну)</option>' + s.countries.map(c => `<option value="${c.id}">${c.flag} ${esc(c.name)}</option>`).join('');
     $('quick').innerHTML = s.tiers.map(t => `<button data-coins="${t.min}">${ic(t.id)} ${t.min}</button>`).join('');
     $('tiers').querySelector('tbody').innerHTML = s.tiers.map(t => `<tr data-id="${t.id}"><td>${ic(t.id)}</td><td>${esc(t.name)}</td>
       <td><input type="number" min="1" data-k="min" value="${t.min}"></td><td><input type="number" min="1" data-k="${POWER[t.id] || 'dash'}" value="${t[POWER[t.id] || 'dash'] ?? ''}"></td></tr>`).join('');

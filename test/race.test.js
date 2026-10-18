@@ -212,3 +212,32 @@ test('страну можно сменить (не чаще раза в мину
   race.likes(viewer('Nar'), 10);
   assert.equal(events.filter(e => e.kind === 'likes').at(-1).country, 'am');
 });
+
+test('лайки без команды машину не двигают, а просят написать код', () => {
+  const { race, events, run, pos } = makeRace();
+  race.likes(viewer('Nar'), 30);
+  run(2);
+  assert.ok(events.some(e => e.kind === 'needTeam' && e.name === 'Nar'));
+  assert.ok(!events.some(e => e.kind === 'likes'));
+  assert.ok(Math.abs(pos('am') - pos('ru')) < 1);
+});
+
+test('чат и лайки одного зрителя связываются, даже если в одном событии нет userId', () => {
+  const { race, events } = makeRace();
+  race.chat({ id: '777', user: 'NetFactory', login: 'netfactory', comment: 'AM🇦🇲' });
+  race.likes({ user: 'NetFactory', login: 'netfactory' }, 10);
+  race.likes({ id: '777', user: 'NetFactory', login: '' }, 10);
+  const likes = events.filter(e => e.kind === 'likes');
+  assert.equal(likes.length, 2);
+  assert.ok(likes.every(e => e.country === 'am'));
+});
+
+test('чат: кириллические «АМ», «КZ» и слова поддержки тоже записывают в команду', () => {
+  const idx = createCountryIndex(config.race.countries);
+  assert.equal(idx.parseChat('АМ').join, 'am');
+  assert.equal(idx.parseChat('КZ').join, 'kz');
+  assert.equal(idx.parseChat('го AM!').join, 'am');
+  assert.equal(idx.parseChat('за Армению').join, 'am');
+  assert.equal(idx.parseChat('I am here').join, null);
+  assert.equal(idx.parseChat('атака АМ').attack, 'am');
+});

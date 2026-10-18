@@ -47,7 +47,17 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
   const L = () => S.trackLength;
   const mult = () => (final ? S.finalMultiplier : 1);
   const rand = (a, b) => a + random() * (b - a);
-  const keyOf = ev => ev.login || ev.user || 'anon';
+  // Один и тот же зритель в разных событиях TikTok может прийти то с userId, то только с логином или ником —
+  // связываем их, чтобы чат, лайки и подарки считались за одного человека
+  const aliases = new Map();
+  function keyOf(ev) {
+    const id = ev.id ? `id:${ev.id}` : '';
+    const byLogin = ev.login ? `login:${ev.login.toLowerCase()}` : '', byNick = ev.user ? `nick:${ev.user}` : '';
+    const key = id || aliases.get(byLogin) || aliases.get(byNick) || byLogin || byNick || 'anon';
+    if (id) { if (byLogin) aliases.set(byLogin, id); if (byNick) aliases.set(byNick, id); }
+    if (id && byLogin && teams.has(byLogin) && !teams.has(id)) { teams.set(id, teams.get(byLogin)); teams.delete(byLogin); }
+    return key;
+  }
 
   function syncCountries() {
     const key = JSON.stringify(S.countries.map(c => c.id + (c.aliases || []).join()));
@@ -237,10 +247,21 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
   }
 
   // ---------- бесплатные действия ----------
-  // Каждый лайк сразу толкает машину; шкала команды копится до бонусного рывка
+  // Каждый лайк сразу толкает машину своей команды; шкала команды копится до бонусного рывка.
+  // Без команды лайк машину не двигает — зритель получает подсказку «напиши код страны».
+  const nudged = new Map();
+  function needTeam(v) {
+    if (clock - (nudged.get(v.key) ?? -99) < 20) return null;
+    nudged.set(v.key, clock);
+    emit('race:fx', { kind: 'needTeam', name: v.name, avatar: v.avatar });
+    return null;
+  }
   function likes(ev, count) {
     const v = viewerOf(ev);
-    const { country } = teamFor(v, { announce: false });
+    const t = teams.get(v.key);
+    if (!t) return needTeam(v);
+    const country = t.country;
+    touchMember(v, country);
     const car = cars.get(country);
     const n = Math.max(1, count || 1);
     const running = phase === 'running' && !paused;
@@ -265,7 +286,8 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
     const v = viewerOf(ev);
     if (followed.has(v.key)) return;
     followed.add(v.key);
-    const { country } = teamFor(v, { announce: false });
+    const country = teams.get(v.key)?.country;
+    if (!country) return needTeam(v);
     protect(country, S.followShieldSec / mult());
     emit('race:fx', { kind: 'follow', country, name: v.name, avatar: v.avatar, sec: S.followShieldSec });
   }
@@ -273,7 +295,8 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
     const v = viewerOf(ev);
     if (clock - (shared.get(v.key) ?? -999) < 60) return;
     shared.set(v.key, clock);
-    const { country } = teamFor(v, { announce: false });
+    const country = teams.get(v.key)?.country;
+    if (!country) return needTeam(v);
     if (phase === 'running') dash(country, S.shareDash);
     emit('race:fx', { kind: 'share', country, name: v.name, avatar: v.avatar });
   }

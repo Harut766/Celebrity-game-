@@ -81,7 +81,7 @@ export function mountRace({ app, broadcast, getConfig, isActive, isLive, localOn
       console.log(`[гонка] ${g.user}${g.login && g.login !== g.user ? ` (@${g.login})` : ''}: ${g.giftName || 'подарок'} ${g.coins} мон. → ${tierFor(S.tiers, g.coins)?.name}${g.sim ? ' (тест)' : ''}`);
     },
     likes(p, count) {
-      const country = race.likes(p, count);
+      const country = race.likes(p, count) || 'без команды';
       likeLog.set(country, (likeLog.get(country) || 0) + (count || 1));
     },
     follow: p => { race.follow(p); console.log(`[гонка] подписка: ${p.user}`); },
@@ -90,6 +90,7 @@ export function mountRace({ app, broadcast, getConfig, isActive, isLive, localOn
     chat(p) {
       const r = race.chat(p);
       const code = id => String(id || '').toUpperCase();
+      if (!r.join && !r.attack) console.log(`[чат] ${p.user}: ${String(p.comment || '').slice(0, 40)}`);
       if (r.attack) console.log(`[гонка] ${p.user}: целится в ${code(r.attack)}`);
       else if (r.locked) console.log(`[гонка] ${p.user} хочет за ${code(r.wanted)}, но только что выбрал ${code(r.join)} — сменить можно через минуту`);
       else if (r.join) console.log(`[гонка] ${p.user} → команда ${code(r.join)}${r.same ? ' (уже в ней)' : r.from ? ` (был ${code(r.from)})` : ''}`);

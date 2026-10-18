@@ -330,6 +330,8 @@
   H.join = fx => { card(fx.country, fx, `ЗА ${(countryById(fx.country)?.name || '').toUpperCase()}!`, '#9aff7a'); sound('join'); };
   H.arrive = fx => { card(fx.country, fx, 'НА СТАРТЕ!', '#cfd6ff'); };
   H.hello = () => {};
+  // Лайкает без команды — подсказываем написать код страны
+  H.needTeam = fx => banner(`<div class="big">${avaHtml(fx)}<span>${short(fx.name)}</span></div><div class="sub">напиши в чат код страны: AM, RU, KZ…</div>`, { color: '#3aa8ff', ms: 1800, priority: 2 });
   H.rescue = fx => banner(`<div class="big">${avaHtml(fx)}<span>${short(fx.name)}</span></div><div class="sub">спасает ${flagName(fx.country)}!</div>`, { color: '#9aff7a', ms: 1700, priority: 2 });
   H.queued = fx => card(fx.country, fx, 'СРАБОТАЕТ НА СТАРТЕ', '#cfd6ff');
   H.wait = fx => card(fx.country, fx, `${label(fx)} · В ОЧЕРЕДИ`, '#cfd6ff', fx.tier);

@@ -24,11 +24,17 @@ export function createCountryIndex(countries) {
   }
   const ids = new Set(countries.map(c => c.id));
   const tokens = text => fold(text).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  // «АМ», «КZ», «ТR», набранные кириллицей, выглядят как латинские коды — понимаем и их
+  const LOOK = { а: 'a', м: 'm', к: 'k', т: 't', з: 'z', р: 'r', у: 'u' };
+  const latin = w => w.length === 2 ? [...w].map(ch => LOOK[ch] || ch).join('') : w;
+  const lookup = w => byToken.get(w) || (ids.has(latin(w)) ? latin(w) : null);
+  // Слова поддержки, которые не мешают вступить: «го AM», «за Армению», «давай RU!»
+  const FILLER = new Set(['go', 'го', 'за', 'давай', 'вперед', 'team', 'команда', 'hadi', 'ура', 'forza', 'vamos', 'я', 'i']);
 
   /** Страна по одному слову (код, название, флаг) или null */
   const byWord = word => {
     const flag = flagCodes(word).find(c => ids.has(c));
-    return flag || byToken.get(fold(word).replace(/[^\p{L}\p{N}]+/gu, '')) || null;
+    return flag || lookup(fold(word).replace(/[^\p{L}\p{N}]+/gu, '')) || null;
   };
 
   return {
@@ -47,9 +53,9 @@ export function createCountryIndex(countries) {
       if (attackTarget) { result.attack = attackTarget; return result; }
       const flag = flagCodes(raw).find(c => ids.has(c));
       if (flag) { result.join = flag; return result; }
-      const words = tokens(raw);
+      const words = tokens(raw).filter(w => !FILLER.has(w));
       if (words.length && words.length <= 4) {
-        const found = words.map(w => byToken.get(w));
+        const found = words.map(lookup);
         if (found.every(Boolean) && new Set(found).size === 1) result.join = found[0];
       }
       return result;

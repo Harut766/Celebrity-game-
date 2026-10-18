@@ -221,6 +221,7 @@ setInterval(() => {
 }, 10_000);
 
 const who = data => ({
+  id: String(data.user?.userId || '').replace(/^0$/, ''),
   user: data.user?.nickname || data.user?.uniqueId || 'Аноним',
   login: data.user?.uniqueId || '',
   avatar: avatarOf(data.user),
@@ -260,7 +261,7 @@ function connectTikTok() {
     const g = normalizeTikTokGift(data);
     if (isRace()) {
       // Монеты = цена подарка × сколько штук пришло в этом событии (серия считается по приросту)
-      R.gift({ ...g, avatar: avatarOf(data.user), coins: (g.coins || 1) * count, giftImage: giftImageOf(data) });
+      R.gift({ ...g, id: String(data.user?.userId || ''), avatar: avatarOf(data.user), coins: (g.coins || 1) * count, giftImage: giftImageOf(data) });
       return;
     }
     onGift({ ...g, avatar: avatarOf(data.user), repeatCount: count });
