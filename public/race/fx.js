@@ -326,6 +326,25 @@
   H.start = () => { sound('start'); };
   H.final = fx => { banner(`<div class="big">🔥 ФИНАЛ ×${fx.multiplier || 2}</div><div class="sub">Все эффекты удваиваются!</div>`, { color: '#ffb21a', ms: 2600, priority: 5 }); sound('final'); };
 
+  // Озвучка «Спасибо, Nar, за ракету!» (включается в панели)
+  const THANKS = { nitro: 'нитро', turbo: 'турбо', shield: 'щит', rocket: 'ракету', super: 'супер-атаку', chaos: 'хаос', legend: 'легенду' };
+  for (const id of Object.keys(THANKS)) {
+    const inner = H[id];
+    H[id] = fx => { inner(fx); if (R.view?.tts && fx.name) try { A().thank(fx.name, THANKS[id]); } catch {} };
+  }
+
+  // Выхлоп и линии скорости — машины «живые» даже без подарков
+  R.hooks.under.push(() => {
+    const st = R.state;
+    if (!st || st.phase !== 'running') return;
+    for (const c of st.cars) {
+      const r = carRect(c.id);
+      if (!r) continue;
+      if (Math.random() < .25) U({ type: 'smoke', x: r.x + 2, y: r.y + 50, vx: rand(-90, -40), vy: rand(-20, 0), life: .7, size: 6, drag: 1.2, light: true });
+      if ((r.car.speed || 0) > 40 && Math.random() < .5) O({ type: 'line', x: r.x - rand(10, 120), y: r.y + rand(10, r.h - 10), vx: -700, vy: 0, life: .15, size: rand(30, 70), color: 'rgba(255,255,255,.35)' });
+    }
+  });
+
   let helloAt = 0;
   function hello(fx) {
     if (performance.now() - helloAt < 4000) return;

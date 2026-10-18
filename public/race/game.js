@@ -224,7 +224,7 @@
   const timerText = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
   function renderHud() {
     if (!state) return;
-    $('timer').textContent = timerText(Math.ceil(state.timeLeft));
+    $('timer').textContent = state.phase === 'finished' ? '0:00' : timerText(Math.ceil(state.timeLeft));
     $('timer').classList.toggle('low', state.phase === 'running' && state.timeLeft <= 10);
     $('final').hidden = !(state.final && state.phase === 'running');
     const wins = Object.entries(people.wins || {}).sort((a, b) => b[1] - a[1]).slice(0, 3);
@@ -310,6 +310,7 @@
       ${hero ? `<div class="hero">Герой раунда: ${avaHtml(hero)} <b>${esc(hero.name)}</b> · ${fmt(hero.coins)}🪙</div>` : ''}
       ${wins.length ? `<div class="wins">Побед за день: ${wins.map(([id, n]) => `${flagImg(id, 36, 24)} ${n}`).join(' ')}</div>` : ''}</div>`;
     $('winner').hidden = false;
+    sayLine(`🏁 Победа: ${flagImg(c.id, 40, 27)} ${esc(c.name)}!`);
     window.RaceDrama?.finish(f);
   }
 
@@ -350,6 +351,14 @@
       drawMembers(c, positions[c.id]);
     }
     hooks.over.forEach(h => h(ctx, dt, now));
+    // Финал ×2: трасса пульсирует оранжевым
+    if (state.final && state.phase === 'running') {
+      ctx.save();
+      ctx.globalAlpha = .45 + .35 * Math.sin(now / 160);
+      ctx.strokeStyle = '#ffb21a'; ctx.lineWidth = 8; ctx.shadowColor = '#ff8a1a'; ctx.shadowBlur = 24;
+      ctx.strokeRect(4, LANE_TOP - 4, W - 8, laneY(countries().length) - LANE_TOP + 8);
+      ctx.restore();
+    }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (cam.zoom > 1.001) {
       const v = ctx.createRadialGradient(W / 2, 750, 200, W / 2, 750, 900);
@@ -380,10 +389,12 @@
         syncCars(stateAt);
         if (prevPhase === 'countdown' && d.phase === 'running') showGo();
         if (prevPhase === 'finished' && d.phase !== 'finished') $('winner').hidden = true;
+        // Музыка: идёт во время гонки, в финале быстрее, в последние 10 секунд — ещё плотнее
+        try { window.RaceAudio.music(d.phase === 'running' && !d.paused, d.final ? (d.timeLeft <= 10 ? 2 : 1) : 0); } catch {}
         break;
       }
       case 'race:people': people = d; renderTops(); break;
-      case 'race:view': view = d; bg = null; sprites.clear(); renderPrices(); break;
+      case 'race:view': view = d; bg = null; sprites.clear(); renderPrices(); try { window.RaceAudio.setVolume(d.volume); } catch {} break;
       case 'race:fx': onFx(d); break;
       case 'race:say': sayLine(fillVars(d.text, d.vars)); break;
       case 'race:finish': showWinner(d); break;
@@ -402,7 +413,7 @@
 
   (async function init() {
     try { view = await (await fetch('/api/race/view')).json(); } catch {}
-    if (view) renderPrices();
+    if (view) { renderPrices(); try { window.RaceAudio.setVolume(view.volume); } catch {} }
     connect();
     requestAnimationFrame(frame);
   })();

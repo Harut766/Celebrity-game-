@@ -73,7 +73,7 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
   // ---------- комментатор: не чаще раза в 4–5 с, без одинаковых фраз подряд ----------
   function say(kind, vars = {}, priority = 1) {
     const list = S.commentator?.[kind];
-    if (!list?.length) return;
+    if (!list?.length || phase !== 'running') return;
     if (talk.pending && talk.pending.priority > priority) return;
     talk.pending = { kind, vars, priority };
   }
