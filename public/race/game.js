@@ -139,6 +139,14 @@
     }
   }
 
+  // Где сейчас машина страны (для эффектов)
+  function carRect(id) {
+    const car = cars.get(id), lane = laneOf(id);
+    if (!car || lane < 0) return null;
+    const front = carX(car.disp);
+    return { x: front - CAR.w, y: laneMid(lane) - CAR.h / 2 + 2, front, mid: laneMid(lane), w: CAR.w, h: CAR.h, car };
+  }
+
   function drawCar(c, car, now) {
     const lane = laneOf(c.id);
     const front = carX(car.disp);
@@ -256,7 +264,8 @@
     $('say').innerHTML = `<span class="line ${cls}">${html}</span>`;
   }
 
-  // ---------- эффекты (этап 2) ----------
+  // ---------- эффекты (fx.js) ----------
+  const hooks = { under: [], over: [] };
   const fxHandlers = {};
   function onFx(fx) { (fxHandlers[fx.kind] || (() => {}))(fx); }
 
@@ -312,6 +321,7 @@
       glow.addColorStop(0, 'rgba(255,214,90,0)'); glow.addColorStop(1, hexA(col === '#FFFFFF' ? '#ffd45a' : col, .22));
       ctx.fillStyle = glow; ctx.fillRect(START_X, laneY(i) + 2, FINISH_X - START_X, LANE_H - 4);
     }
+    hooks.under.forEach(h => h(ctx, dt, now));
     const positions = {};
     for (const c of countries()) {
       const car = cars.get(c.id);
@@ -320,6 +330,7 @@
       positions[c.id] = drawCar(c, car, now);
       drawMembers(c, positions[c.id]);
     }
+    hooks.over.forEach(h => h(ctx, dt, now));
     renderHud();
     renderCountdown();
   }
@@ -371,6 +382,6 @@
     requestAnimationFrame(frame);
   })();
 
-  window.Race = { fxHandlers, onFx, sayLine, fillVars, ctx, cars, countryById, laneOf, laneMid, laneY, carX, drawAvatar, avaHtml, flagImg, esc, fmt, rand, pick, clamp, sleep, ease, hexA, report,
+  window.Race = { fxHandlers, onFx, hooks, carRect, avatarImg, drawFlag, CAR, LANE_TOP, sayLine, fillVars, ctx, cars, countryById, laneOf, laneMid, laneY, carX, drawAvatar, avaHtml, flagImg, esc, fmt, rand, pick, clamp, sleep, ease, hexA, report,
     get view() { return view; }, get state() { return state; }, get people() { return people; }, stage, W, H, LANE_H, START_X, FINISH_X };
 })();
