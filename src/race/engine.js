@@ -308,18 +308,24 @@ export function createRace({ getSettings, emit = () => {}, store = null, random 
   }
   // Код страны в чате: вступить в команду. Выбор запоминается на всю трансляцию,
   // но сменить страну можно — не чаще раза в минуту (чтобы не прыгали туда-сюда).
-  const switchedAt = new Map();
+  const switchedAt = new Map(), rejoinShown = new Map();
   function chat(ev) {
     const v = viewerOf(ev);
     const { join: wanted, attack } = index.parseChat(ev.comment);
     if (attack) { attackPref.set(v.key, { country: attack, until: clock + ATTACK_PREF_SEC }); return { attack }; }
     const t = teams.get(v.key);
     if (!wanted) { if (t) touchMember(v, t.country); return {}; }
-    if (t?.country === wanted) { touchMember(v, wanted); emit('race:fx', { kind: 'join', country: wanted, name: v.name, avatar: v.avatar }); return { join: wanted, same: true }; }
+    if (t?.country === wanted) {
+      touchMember(v, wanted);
+      // повторное «AM» в чате показываем не чаще раза в 30 с, иначе дорожка тонет в карточках
+      if (clock - (rejoinShown.get(v.key) ?? -999) >= 30) { rejoinShown.set(v.key, clock); emit('race:fx', { kind: 'join', country: wanted, name: v.name, avatar: v.avatar }); }
+      return { join: wanted, same: true };
+    }
     if (t?.explicit && clock - (switchedAt.get(v.key) ?? -999) < 60) return { join: t.country, locked: true, wanted };
     switchedAt.set(v.key, clock);
     if (t) { const list = (members.get(t.country) || []).filter(m => m.key !== v.key); members.set(t.country, list); }
     assign(v, wanted, true);
+    rejoinShown.set(v.key, clock);
     emit('race:fx', { kind: 'join', country: wanted, name: v.name, avatar: v.avatar });
     return { join: wanted, from: t?.country };
   }

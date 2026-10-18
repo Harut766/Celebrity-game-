@@ -78,11 +78,19 @@
     const i = images.get(url);
     return i.complete && i.naturalWidth ? i : null;
   }
+  // Одна карточка на дорожку — внутри своей полосы, следующие ждут очереди (не наезжают друг на друга)
+  const queues = new Map();
   function card(country, fx, label, color = '#ffd23a', tier = null) {
-    const busy = cards.filter(c => c.country === country).length;
-    const used = new Set(cards.filter(c => c.country === country).map(c => c.slot));
-    let slot = 0; while (used.has(slot) && slot < 2) slot++;
-    cards.push({ country, name: fx.name, avatar: fx.avatar, giftImage: fx.giftImage, label, color, tier, age: 0, life: busy > 2 ? 1.4 : 2.4, slot });
+    const q = queues.get(country) || [];
+    const item = { country, name: fx.name, avatar: fx.avatar, giftImage: fx.giftImage, label, color, tier, age: 0, life: 2.6 };
+    if (tier) {
+      // подарок важнее «вступил в команду»: идёт вне очереди, текущая простая карточка уходит сразу
+      if (q[0] && !q[0].tier) q[0].life = Math.min(q[0].life, q[0].age + .2);
+      const at = q.findIndex((c, i) => i > 0 && !c.tier);
+      q.splice(at < 0 ? q.length : at, 0, item);
+    } else q.push(item);
+    while (q.length > 4) { const i = q.findLastIndex(c => !c.tier); q.splice(i > 0 ? i : 1, 1); }
+    queues.set(country, q);
   }
   function roundRect(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
   function outlined(text, x, y, color) {
@@ -90,24 +98,34 @@
     ctx.fillStyle = color; ctx.fillText(text, x, y);
   }
   function drawCards(dt) {
-    for (let i = cards.length - 1; i >= 0; i--) {
-      const c = cards[i];
+    for (const q of queues.values()) {
+      const c = q[0];
+      if (!c) continue;
       c.age += dt;
-      if (c.age >= c.life) { cards.splice(i, 1); continue; }
+      // если в очереди есть следующая — текущая уходит быстрее
+      if (q.length > 1 && c.age > 1.1 && c.life > c.age + .25) c.life = c.age + .25;
+      if (c.age >= c.life) { q.shift(); continue; }
       const r = carRect(c.country);
       if (!r) continue;
       const k = c.age / c.life;
       const pop = c.age < .18 ? 1 - (1 - c.age / .18) ** 3 : 1;
       ctx.save();
-      ctx.globalAlpha = k > .8 ? (1 - k) / .2 : 1;
+      ctx.globalAlpha = c.age > c.life - .25 ? (c.life - c.age) / .25 : 1;
       ctx.font = `36px ${FONT}`;
       const name = [...c.name].slice(0, 12).join('');
       const tw = Math.max(ctx.measureText(name).width, ctx.measureText(c.label).width);
       const icon = c.tier ? 48 : 0, gift = img(c.giftImage) ? 56 : 0;
       const w = 74 + tw + (icon ? icon + 10 : 0) + (gift ? gift + 8 : 0) + 24, h = 92;
-      const x = clamp(r.cx + 40 + c.slot * 60, R.LABEL_W + w / 2 + 6, 1070 - w / 2), y = r.y - 30 - c.slot * 98 - k * 40;
+      // впереди машины, если помещается до финиша, иначе позади неё
+      const minX = R.LABEL_W + w / 2 + 8, maxX = 1072 - w / 2;
+      let x = r.front + 24 + w / 2;
+      if (x > maxX) x = r.x - 24 - w / 2;
+      x = clamp(x, minX, maxX);
+      const y = r.mid - 4 - Math.sin(Math.min(1, k * 6) * Math.PI) * 6;
       ctx.translate(x, y); ctx.scale(pop, pop);
-      ctx.fillStyle = 'rgba(6,8,22,.93)'; roundRect(-w / 2, -h / 2, w, h, 26); ctx.fill();
+      ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 6;
+      ctx.fillStyle = 'rgba(6,8,22,.94)'; roundRect(-w / 2, -h / 2, w, h, 26); ctx.fill();
+      ctx.shadowColor = 'transparent';
       ctx.lineWidth = 4; ctx.strokeStyle = c.color; ctx.stroke();
       drawAvatar({ name: c.name, avatar: c.avatar }, -w / 2 + 40, 0, 30, c.color, 3);
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -283,7 +301,7 @@
       ? `${TITLE[fx.tier]} по ${targets.map(t => flagImg(t, 66, 44)).join(' ')}`
       : `${TITLE[fx.tier]} для ${flagImg(fx.country, 66, 44)}`;
     banner(`<div class="big">${avaHtml(fx)}<span>${short(fx.name)}</span>${fx.giftImage ? `<img class="gift" src="${esc(fx.giftImage)}" referrerpolicy="no-referrer" alt="">` : ''}</div>
-      <div class="sub">→ ${iconHtml(fx.tier)} ${what}${fx.final ? ' ×2' : ''}</div>`, { color, priority, ms });
+      <div class="sub">${iconHtml(fx.tier)} ${what}${fx.final ? ' ×2' : ''}</div>`, { color, priority, ms });
   }
 
   // ---------- эффекты по уровням ----------
@@ -324,10 +342,12 @@
     banner(`<div class="big">${iconHtml('rocket')} ПОПАДАНИЕ!</div><div class="sub">${flagName(fx.target)} · ОТВЕТИТЕ?</div>`, { color: '#ff5a4a', ms: 1800, priority: 3 });
   };
   H.likeBonus = fx => { trail(fx.country, 2, 'turbo'); card(fx.country, { name: 'ЛАЙКИ', avatar: '' }, 'РЫВОК КОМАНДЫ!', '#ff6a9a', 'nitro'); sound('turbo'); };
-  H.likes = fx => { trail(fx.country, .9, 'nitro'); const r = carRect(fx.country); if (r) for (let i = 0; i < 6; i++) O({ type: 'heart', x: r.cx + rand(-r.w / 2, r.w / 2), y: r.y, vx: rand(-40, 40), vy: rand(-170, -90), life: 1, size: 40, drag: 0 }); sound('like'); };
+  H.likes = fx => { trail(fx.country, .9, 'nitro'); const r = carRect(fx.country); if (r) for (let i = 0; i < 6; i++) O({ type: 'heart', x: r.x + rand(0, r.w * .4), y: r.mid + rand(-14, 14), vx: rand(-230, -120), vy: rand(-50, 10), life: .9, size: 40, drag: 0 }); sound('like'); };
   H.follow = fx => { card(fx.country, fx, 'ПОДПИСКА · ЩИТ', '#8fb4ff', 'shield'); sound('shield'); };
   H.share = fx => { card(fx.country, fx, 'РЕПОСТ · РЫВОК', '#9aff7a', 'nitro'); trail(fx.country, 1.2, 'nitro'); sound('nitro'); };
-  H.join = fx => { card(fx.country, fx, `ЗА ${(countryById(fx.country)?.name || '').toUpperCase()}!`, '#9aff7a'); sound('join'); };
+  // «за Россию», «за Армению», «за Казахстан» — винительный падеж
+  const forName = n => n.replace(/ия$/i, 'ию').replace(/а$/i, 'у');
+  H.join = fx => { card(fx.country, fx, `ЗА ${forName(countryById(fx.country)?.name || '').toUpperCase()}!`, '#9aff7a'); sound('join'); };
   H.arrive = fx => { card(fx.country, fx, 'НА СТАРТЕ!', '#cfd6ff'); };
   H.hello = () => {};
   // Лайкает без команды — подсказываем написать код страны

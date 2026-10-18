@@ -14,6 +14,9 @@ body { font-family: var(--font); color: #fff; }
 @keyframes shake { 25% { transform: var(--fit) translate(-8px, 5px); } 50% { transform: var(--fit) translate(7px, -6px); } 75% { transform: var(--fit) translate(-4px, 3px); } }
 @keyframes bigShake { 10% { transform: var(--fit) translate(-20px, 12px); } 25% { transform: var(--fit) translate(18px, -14px); } 40% { transform: var(--fit) translate(-13px, 9px); } 60% { transform: var(--fit) translate(10px, -6px); } 80% { transform: var(--fit) translate(-5px, 3px); } }
 #scene3d, #fx2d { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+/* Зоны TikTok: сверху его панель, снизу чат — трибуны там приглушены, чтобы текст читался */
+#shadeTop { position: absolute; left: 0; top: 0; width: 1080px; height: 230px; background: linear-gradient(180deg, rgba(4,5,12,.72), rgba(4,5,12,.35) 75%, rgba(4,5,12,0)); pointer-events: none; }
+#shadeChat { position: absolute; left: 0; top: 1380px; width: 1080px; height: 540px; background: linear-gradient(180deg, rgba(4,5,12,0), rgba(4,5,12,.78) 30%, rgba(4,5,12,.88)); pointer-events: none; }
 .flag { display: inline-block; vertical-align: middle; border-radius: 5px; box-shadow: 0 2px 6px rgba(0,0,0,.6); }
 .coin { width: .8em; height: .8em; vertical-align: -.06em; margin-left: .12em; }
 .ava { border-radius: 50%; object-fit: cover; flex: none; background: #334; }
