@@ -264,6 +264,18 @@
     $('say').innerHTML = `<span class="line ${cls}">${html}</span>`;
   }
 
+  // ---------- камера ----------
+  const camera = {
+    zoom: 1, x: W / 2, y: 750, target: null,
+    set({ zoom, x, y, sec }) { this.target = { zoom, x, y, until: performance.now() + sec * 1000 }; },
+    update(dt, now) {
+      const t = this.target && now < this.target.until ? this.target : { zoom: 1, x: this.x, y: this.y };
+      const k = Math.min(1, dt * 4);
+      this.zoom += (t.zoom - this.zoom) * k; this.x += (t.x - this.x) * k; this.y += (t.y - this.y) * k;
+      return this;
+    },
+  };
+
   // ---------- эффекты (fx.js) ----------
   const hooks = { under: [], over: [] };
   const fxHandlers = {};
@@ -279,11 +291,13 @@
     lastCount = n;
     el.hidden = false; el.className = '';
     el.innerHTML = `<span class="num">${n}</span>`;
+    try { window.RaceAudio.play('count'); } catch {}
   }
   function showGo() {
     const el = $('countdown');
     el.hidden = false; el.className = 'go';
     el.innerHTML = '<span class="num">СТАРТ!</span>';
+    try { window.RaceAudio.play('go'); } catch {}
     setTimeout(() => { el.hidden = true; }, 1100);
   }
   function showWinner(f) {
@@ -296,6 +310,7 @@
       ${hero ? `<div class="hero">Герой раунда: ${avaHtml(hero)} <b>${esc(hero.name)}</b> · ${fmt(hero.coins)}🪙</div>` : ''}
       ${wins.length ? `<div class="wins">Побед за день: ${wins.map(([id, n]) => `${flagImg(id, 36, 24)} ${n}`).join(' ')}</div>` : ''}</div>`;
     $('winner').hidden = false;
+    window.RaceDrama?.finish(f);
   }
 
   // ---------- главный цикл ----------
@@ -310,7 +325,11 @@
     if (!view || !state) return;
     if (!bg) buildBackground();
     updateCars(dt, now);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, W, H);
+    // Камера: на фотофинише приближает финиш
+    const cam = camera.update(dt, now);
+    if (cam.zoom > 1.001) ctx.setTransform(cam.zoom, 0, 0, cam.zoom, cam.x * (1 - cam.zoom), cam.y * (1 - cam.zoom));
     ctx.drawImage(bg, 0, 0);
     const ranking = [...cars.values()].sort((a, b) => b.disp - a.disp).map(c => c.id);
     // подсветка дорожки лидера
@@ -331,6 +350,12 @@
       drawMembers(c, positions[c.id]);
     }
     hooks.over.forEach(h => h(ctx, dt, now));
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (cam.zoom > 1.001) {
+      const v = ctx.createRadialGradient(W / 2, 750, 200, W / 2, 750, 900);
+      v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${(cam.zoom - 1) * .9})`);
+      ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+    }
     renderHud();
     renderCountdown();
   }
@@ -382,6 +407,6 @@
     requestAnimationFrame(frame);
   })();
 
-  window.Race = { fxHandlers, onFx, hooks, carRect, avatarImg, drawFlag, CAR, LANE_TOP, sayLine, fillVars, ctx, cars, countryById, laneOf, laneMid, laneY, carX, drawAvatar, avaHtml, flagImg, esc, fmt, rand, pick, clamp, sleep, ease, hexA, report,
+  window.Race = { fxHandlers, onFx, hooks, camera, carRect, avatarImg, drawFlag, CAR, LANE_TOP, sayLine, fillVars, ctx, cars, countryById, laneOf, laneMid, laneY, carX, drawAvatar, avaHtml, flagImg, esc, fmt, rand, pick, clamp, sleep, ease, hexA, report,
     get view() { return view; }, get state() { return state; }, get people() { return people; }, stage, W, H, LANE_H, START_X, FINISH_X };
 })();

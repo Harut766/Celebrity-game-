@@ -9,7 +9,7 @@ const TICK_MS = 50;      // физика 20 раз в секунду
 const STATE_EVERY = 2;   // состояние на экран 10 раз в секунду
 
 // Что можно менять из панели (остальное — в config.json)
-const EDITABLE = ['roundSec', 'finalSec', 'finalMultiplier', 'autoNextRound', 'baseSpeed', 'likesPerDash', 'tts', 'volume', 'dragon', 'tiers'];
+const EDITABLE = ['roundSec', 'finalSec', 'finalMultiplier', 'autoNextRound', 'baseSpeed', 'likesPerDash', 'tts', 'volume', 'dragon', 'tiers', 'photoFinish'];
 
 function merge(base, over) {
   const out = { ...base };
